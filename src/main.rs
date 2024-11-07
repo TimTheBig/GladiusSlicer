@@ -78,7 +78,7 @@ struct Args {
 }
 
 fn main() {
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "json_schema_gen")]
     // export json schema for settings
     Settings::gen_schema(Path::new("settings/")).expect("The programme should exit if this fails");
 

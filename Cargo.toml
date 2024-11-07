@@ -12,6 +12,9 @@ members = [
     "gladius_shared"
 ]
 
+[features]
+json_schema_gen = ["gladius_shared/json_schema_gen"]
+
 [dependencies]
 clap = { version = "4", features = ["derive"]}
 simple_logger = "5.0.0"

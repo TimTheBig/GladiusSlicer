@@ -6,7 +6,7 @@ use crate::warning::SlicerWarnings;
 // for exclude area setting
 use geo::MultiPolygon;
 use gladius_proc_macros::Settings;
-#[cfg(debug_assertions)]
+#[cfg(feature = "json_schema_gen")]
 /// json schema gen
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -64,7 +64,7 @@ macro_rules! option_setting_less_than_zero {
 }
 
 /// A complete settings file for the entire slicer.
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Settings, Serialize, Deserialize, Debug)]
 pub struct Settings {
     /// The height of the layers
@@ -245,7 +245,7 @@ pub struct Settings {
 
 impl Settings {
     /// Genarate the json schema for `Settings`
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "json_schema_gen")]
     pub fn gen_schema(path: &std::path::Path) -> Result<(), std::io::Error> {
         use std::{fs::File, io::Write};
 
@@ -653,7 +653,7 @@ pub struct LayerSettings {
 }
 
 /// A set of values for different movement types
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct MovementParameter {
     /// Value for interior (perimeters that are inside the model
@@ -706,7 +706,7 @@ impl MovementParameter {
 }
 
 /// Settings for a filament
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct FilamentSettings {
     /// Diameter of this filament in mm
@@ -726,7 +726,7 @@ pub struct FilamentSettings {
 }
 
 /// Settings for the fans
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct FanSettings {
     #[cfg_attr(debug_assertions, validate(range(max = 100.0)))]
@@ -767,7 +767,7 @@ impl Default for FanSettings {
 }
 
 /// Support settings
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SupportSettings {
     /// Angle to start production supports in degrees
@@ -778,7 +778,7 @@ pub struct SupportSettings {
 }
 
 /// The Settings for Skirt generation
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SkirtSettings {
     /// the number of layer to generate the skirt
@@ -789,7 +789,7 @@ pub struct SkirtSettings {
 }
 
 /// The Settings for Skirt generation
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RetractionWipeSettings {
     /// The speed the retract wipe move
@@ -803,7 +803,7 @@ pub struct RetractionWipeSettings {
 }
 
 /// A partial complete settings file
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PartialSettingsFile {
     /// Other files to load
@@ -854,7 +854,7 @@ impl PartialSettingsFile {
 }
 
 /// The different types of layer ranges supported
-#[cfg_attr(debug_assertions, derive(JsonSchema))]
+#[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum LayerRange {
     /// A single single based on the index

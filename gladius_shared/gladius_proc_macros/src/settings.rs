@@ -27,7 +27,7 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         // field : Option<Type> 
         // if labeled optional or merge use ( must be an option if optional already)
         // field : Type
-        #[cfg_attr(debug_assertions, derive(JsonSchema))]
+        #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
         #[derive(Serialize, Deserialize, Debug, Clone, Default)]
         /// Partial Version of the struct #struct_name_ident
         pub struct #partial_settings_struct_name {
