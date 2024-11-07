@@ -192,6 +192,11 @@ impl Vertex {
 
         self.z = transform.0[2][0] * self.x + transform.0[2][1] * self.y + transform.0[2][2] * self.z + transform.0[2][3];
     }
+
+    /// Get the dot product of two vectors
+    pub fn dot(&self, other: &Vertex) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
 }
 
 impl From<Vertex> for Point3<f64> {
