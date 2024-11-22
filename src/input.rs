@@ -56,6 +56,7 @@ pub fn files_input(settings_path: Option<&str>, input: Option<Vec<String>>) -> F
             };
 
             info!("Loading objects");
+            // todo take optional input
             let object = InputObject::Auto(value);
 
             let (x, y) = match object {

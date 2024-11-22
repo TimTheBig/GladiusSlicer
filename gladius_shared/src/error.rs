@@ -38,7 +38,7 @@ pub enum SlicerErrors {
     ThreemfUnsupportedType,
 
     /// Error during tower generation
-    TowerGeneration,
+    TowerGeneration(f64),
 
     /// No input models provided
     NoInputProvided,
@@ -111,6 +111,9 @@ pub enum SlicerErrors {
 
     /// If a model is in an area of the bed that is rserved, contains the area that it intersected
     InExcludeArea(MultiPolygon),
+
+    /// An angle of 90 or more and -90 or less can be represented with a smaller angle
+    SliceAngleOutOfRange(f64),
 }
 
 impl SlicerErrors {
@@ -141,8 +144,8 @@ impl SlicerErrors {
             SlicerErrors::SettingsFileMissingSettings { missing_setting } => {
                 (0x1006, format!("Could not load settings file. Was missing settings {}.", missing_setting))
             }
-            SlicerErrors::TowerGeneration  => {
-                (0x1007, "Error Creating Tower. Model most likely needs repair. Please Repair and run again.".to_string())
+            SlicerErrors::TowerGeneration(plane_height)  => {
+                (0x1007, format!("Error Creating Tower. Model most likely needs repair. Please Repair and run again: Incomplete ring detected at height {}", plane_height))
             }
             SlicerErrors::NoInputProvided  => {
                 (0x1008, "No Input Provided.".to_string())
@@ -187,7 +190,10 @@ impl SlicerErrors {
                 (0x1015,format!("Prasing the Macros Failed with error: {}",sub_error))
             }
             SlicerErrors::InExcludeArea(area) => {
-                (0x1015, format!("A model intersected with this excluded area: {:?}", area))
+                (0x1016, format!("A model intersected with this excluded area: {:?}", area))
+            },
+            SlicerErrors::SliceAngleOutOfRange(angle) => {
+                (0x1017, format!("The slice angle setting must in in a range of -89 to 89 as a higher angle can be redusted, angle was: {}", angle))
             },
         }
     }

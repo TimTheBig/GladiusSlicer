@@ -44,6 +44,7 @@ pub fn send_warning_message(warning: SlicerWarnings) {
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
+/// Show a state update based on the message mode
 pub fn display_state_update(state_message: &str, send_message: bool) {
     if send_message {
         let stdout = std::io::stdout();
@@ -72,7 +73,9 @@ pub fn point_lerp(a: &Coord<f64>, b: &Coord<f64>, f: f64) -> Coord<f64> {
     }
 }
 
-#[inline]
+/// ## Linear Interpolate
+/// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
+#[inline(always)]
 pub fn lerp(a: f64, b: f64, f: f64) -> f64 {
     a + f * (b - a)
 }

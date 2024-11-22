@@ -238,13 +238,14 @@ pub struct Settings {
     /// Tells the slicer if it can use an aux fan
     pub has_aux_fan: bool,
 
-    #[cfg_attr(feature = "json_schema_gen", validate(range(max = 45.0)))]
-    /// The tilt angle of the slicing plane from the Z-axis  in degrees
-    pub slice_angle: f64,
+    #[Optional]
+    #[cfg_attr(feature = "json_schema_gen", validate(range(min = -89.0, max = 89.0)))]
+    /// The tilt angle of the slicing plane from the Z-axis in degrees
+    pub slice_angle: Option<f64>,
 }
 
 impl Settings {
-    /// Genarate the json schema for `Settings`
+    /// Generate the json schema for [`Settings`]
     #[cfg(feature = "json_schema_gen")]
     pub fn gen_schema(path: &std::path::Path) -> Result<(), std::io::Error> {
         use std::{fs::File, io::Write};
@@ -393,13 +394,14 @@ impl Default for Settings {
             bed_exclude_areas: None,
             max_extruder_temp: 260.0,
             has_aux_fan: false,
-            slice_angle: 0.0,
+            slice_angle: Some(0.0),
         }
     }
 }
 
 impl Settings {
     /// Get the layer settings for a specific layer index and height
+    // todo if their are no layer specific setting then skip
     pub fn get_layer_settings(&self, layer: u32, height: f64) -> LayerSettings {
         let changes = self
             .layer_settings
@@ -481,6 +483,7 @@ impl Settings {
         setting_less_than_zero!(self, minimum_feedrate_print);
         setting_less_than_zero!(self, minimum_retract_distance);
 
+
         if self.layer_height < self.nozzle_diameter * 0.2 {
             return SettingsValidationResult::Warning(SlicerWarnings::LayerSizeTooLow {
                 layer_height: self.layer_height,
@@ -530,6 +533,15 @@ impl Settings {
             return SettingsValidationResult::Warning(SlicerWarnings::NozzleTemperatureTooHigh {
                 temp: self.filament.extruder_temp,
             });
+        }
+
+        // 90 or more can be represented with a smaller angle
+        if self.slice_angle.unwrap_or_default() >= 90.0 || self.slice_angle.unwrap_or_default() <= -90.0 {
+            return SettingsValidationResult::Error(
+                SlicerErrors::SliceAngleOutOfRange(
+                    self.slice_angle.expect("This can only be true if it's not default as that's 0.0")
+                )
+            );
         }
 
         for (_, pls) in &self.layer_settings {
