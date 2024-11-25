@@ -8,6 +8,7 @@
 !*/
 
 use crate::SlicerErrors;
+use crate::utils::lerp;
 use gladius_shared::types::{IndexedTriangle, Vertex};
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
@@ -19,24 +20,24 @@ use std::hash::{Hash, Hasher};
 /// <div class="warning">If v_start.z == v_end.z then divide by 0</div>
 ///
 /// ## Arguments
-/// * `z` - z height of the resulting point
+/// * `plane_height` - z height of the resulting point along the plane_normal
 /// * `v_start` - Starting point of the line
 /// * `v_end` - Ending point of the line
-#[inline]
-fn line_z_intersection(z: f64, v_start: &Vertex, v_end: &Vertex) -> Vertex {
-    let z_normal = (z - v_start.z) / (v_end.z - v_start.z);
-    debug_assert!(z_normal <= 1.0);
+///
+/// Calculate the intersection of a line with a plane defined by `normal` and `plane_height`
+fn plane_intersection(plane_height: f64, v_start: &Vertex, v_end: &Vertex, normal: &Vertex) -> Vertex {
+    // project on to plane
+    let start_proj = v_start.dot(normal);
+    let end_proj = v_end.dot(normal);
 
-    let y = lerp(v_start.y, v_end.y, z_normal);
-    let x = lerp(v_start.x, v_end.x, z_normal);
+    let t = (plane_height - start_proj) / (end_proj - start_proj);
+    debug_assert!(t <= 1.0);
+
+    let x = lerp(v_start.x, v_end.x, t);
+    let y = lerp(v_start.y, v_end.y, t);
+    let z = lerp(v_start.z, v_end.z, t);
+
     Vertex { x, y, z }
-}
-
-/// ## Linear Interpolate
-/// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
-#[inline]
-fn lerp(a: f64, b: f64, f: f64) -> f64 {
-    a + f * (b - a)
 }
 
 /// A set of triangles and their associated vertices
@@ -47,15 +48,16 @@ pub struct TriangleTower {
 
 impl TriangleTower {
     /// Create a `TriangleTower` from **vertices** as leading or trailing edges and **triangles**
+    /// The normal specifys the slicing plane's normal
     pub fn from_triangles_and_vertices(
         triangles: &[IndexedTriangle],
         vertices: Vec<Vertex>,
+        normal: &Vertex,
     ) -> Result<Self, SlicerErrors> {
         let mut future_tower_vert: Vec<Vec<TriangleEvent>> =
             (0..vertices.len()).map(|_| Vec::new()).collect();
 
         // for each triangle add it to the tower
-
         for (triangle_index, index_tri) in triangles.iter().enumerate() {
             // index 0 is always lowest
             future_tower_vert[index_tri.verts[0]].push(TriangleEvent::MiddleVertex {
@@ -81,7 +83,7 @@ impl TriangleTower {
         // for each triangle event, add it to the lowest vertex and
         // create a list of all vertices and there above edges
 
-        let res_tower_vertices: Vec<TowerVertex> = future_tower_vert
+        let mut res_tower_vertices: Vec<TowerVertex> = future_tower_vert
             .into_par_iter()
             .enumerate()
             .map(|(index, events)| {
@@ -93,32 +95,32 @@ impl TriangleTower {
             })
             .collect();
 
-        // propagate errors
-        let mut tower_vertices = res_tower_vertices;
 
-        // sort lowest to highest
-        tower_vertices.sort_by(|a, b| {
-            vertices[a.start_index]
-                .partial_cmp(&vertices[b.start_index])
+        // ! this can cose incomplet rings
+        // Sort tower vertices lowest to highest based on their projection along the normal vector
+        res_tower_vertices.sort_by(|a, b| {
+            // project vertices on to plane and comp
+            vertices[a.start_index].dot(normal)
+                .partial_cmp(&vertices[b.start_index].dot(normal))
                 .expect("STL ERROR: No Points should have NAN values")
         });
 
         Ok(Self {
             vertices,
-            tower_vertices,
+            tower_vertices: res_tower_vertices,
         })
     }
 
-    pub fn get_height_of_vertex(&self, index: usize) -> f64 {
+    pub fn get_height_of_vertex(&self, index: usize, plane_normal: &Vertex) -> f64 {
         if index >= self.tower_vertices.len() {
             f64::INFINITY
         } else {
-            self.vertices[self.tower_vertices[index].start_index].z
+            self.vertices[self.tower_vertices[index].start_index].dot(plane_normal)
         }
     }
 }
 
-/// A vecter of `TowerRing`s with a start index, made of triangles
+/// A vecter of [`TowerRing`]s with a start index, made of triangles
 #[derive(Debug, PartialEq)]
 struct TowerVertex {
     pub next_ring_fragments: Vec<TowerRing>,
@@ -126,9 +128,10 @@ struct TowerVertex {
 }
 
 /// A list of **faces** and **edges**\
-/// When complete it will have at least 3 `TowerRingElement`s and equal first and last elements
+/// When complete it will have at least 3 [`TowerRingElement`]s and equal first and last elements.\
+/// This needs to be checked with [`TowerRing::is_complete_ring`]
 #[derive(Clone, Debug, PartialEq)]
-struct TowerRing {
+pub struct TowerRing {
     elements: Vec<TowerRingElement>,
 }
 
@@ -139,9 +142,10 @@ impl TowerRing {
         self.elements.first() == self.elements.last() && self.elements.len() > 3
     }
 
+    #[inline]
     /// Extend the elements of **first** with all but the first element of **second**
-    fn join_rings_in_place(first: &mut TowerRing, second: &TowerRing) {
-        first.elements.extend_from_slice(&second.elements[1..]);
+    fn join_rings_in_place(first: &mut TowerRing, second: TowerRing) {
+        first.elements.extend(second.elements.into_iter().skip(1));
     }
 
     /// Split the `TowerRing` in to multiple at an edge
@@ -175,6 +179,7 @@ impl TowerRing {
             }
         }
 
+        // ? should this be >=
         // remove all fragments that are single sized and faces. They ends with that vertex
         frags.retain(|frag| frag.elements.len() > 1);
 
@@ -192,7 +197,7 @@ impl Display for TowerRing {
     }
 }
 
-/// Face or Edge of a `TowerRing`
+/// Face or Edge of a [`TowerRing`]
 #[derive(Clone, Debug, Eq)]
 enum TowerRingElement {
     Face {
@@ -232,6 +237,7 @@ impl PartialEq for TowerRingElement {
                 } => end_index == oei && start_index == osi,
                 TowerRingElement::Face { .. } => false,
             },
+
             TowerRingElement::Face { triangle_index, .. } => match other {
                 TowerRingElement::Face {
                     triangle_index: oti,
@@ -261,30 +267,37 @@ impl Hash for TowerRingElement {
     }
 }
 
+/// Events that occur at vertices during the traversal or slicing of triangles
 #[derive(Debug, PartialEq)]
 pub enum TriangleEvent {
+    /// Represents a vertex that connects two edges within a triangle
     MiddleVertex {
         leading_edge: usize,
         triangle: usize,
         trailing_edge: usize,
     },
 
+    /// Represents an event where a vertex marks the start of a new edge within the triangle
     LeadingEdge {
         leading_edge: usize,
         triangle: usize,
     },
 
+    /// Represents an event where a vertex is the endpoint of an edge within the triangle
     TrailingEdge {
         triangle: usize,
         trailing_edge: usize,
     },
 }
 
+/// Takes a list of `TriangleEvent`s and a starting point, for each `TriangleEvent` a face and 1 or 2 edges are created
 fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<TowerRing> {
-    // debug!("Tri events = {:?}",events);
+    // log::debug!("Tri events = {:?}", events);
     let mut element_list: Vec<TowerRing> = events
         .iter()
         .map(|event| match event {
+            // For `LeadingEdge`s make a face with it's triangle_index
+            // and an edge leading_edge as the end_index; then put them in a `TowerRing`
             TriangleEvent::LeadingEdge {
                 leading_edge,
                 triangle,
@@ -301,6 +314,8 @@ fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<T
                     elements: vec![edge_element, triangle_element],
                 }
             }
+
+            // Same as `LeadingEdge` in opasite order
             TriangleEvent::TrailingEdge {
                 triangle,
                 trailing_edge,
@@ -317,6 +332,8 @@ fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<T
                     elements: vec![triangle_element, edge_element],
                 }
             }
+
+            // Make an edge, face then another edge and put them it a vec
             TriangleEvent::MiddleVertex {
                 leading_edge,
                 triangle,
@@ -347,43 +364,38 @@ fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<T
     element_list
 }
 
+/// Merge adjacent rings from a vector of `TowerRing` fragments.\
+/// If the last element of the first fragment matches the first element of the second fragment
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
-    /*
-
-        for frag in &*fragments{
-            println!("fragment {}",frag);
-        }
-    */
-
+    // loop through the fragments
     for first_pos in 0..fragments.len() {
+        // the second position to swap with the first
         let mut second_pos = first_pos + 1;
         while second_pos < fragments.len() {
             let swap;
             let res = {
-                let first = fragments
-                    .get(first_pos)
-                    .expect("Index is validated by loop");
-                let second = fragments
-                    .get(second_pos)
-                    .expect("Index is validated by loop");
+                // Indices are validated by loop
+                let first = &fragments[first_pos];
+                let second = &fragments[second_pos];
 
+                // check if the two can be swapped
                 swap = second.elements.last() == first.elements.first();
                 first.elements.last() == second.elements.first() || swap
             };
+
             if res {
                 if swap {
                     fragments.swap(second_pos, first_pos);
                 }
                 let second_r = fragments.swap_remove(second_pos);
-                let first_r = fragments
-                    .get_mut(first_pos)
-                    .expect("Index is validated by loop");
-                TowerRing::join_rings_in_place(first_r, &second_r);
+                let first_r = &mut fragments[first_pos];
+                TowerRing::join_rings_in_place(first_r, second_r);
 
-                // dont progress as the swap makes this position valid again
+                // Do not increment `second_pos` as the swap makes this position valid again
             } else {
                 second_pos += 1;
             }
+
             if swap {
                 second_pos = first_pos + 1;
             }
@@ -392,30 +404,55 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
 }
 
 pub struct TriangleTowerIterator<'s> {
-    tower: &'s TriangleTower,
-    tower_vert_index: usize,
-    z_height: f64,
+    /// The [`TriangleTower`] that is iterated through
+    pub tower: &'s TriangleTower,
+    /// The next vertex in the tower
+    pub tower_vert_index: usize,
+    /// The **z** height along the slicing *plane*
+    plane_height: f64,
+    /// The *faces* and *edges* in the tower
     active_rings: Vec<TowerRing>,
+    /// The normal vector that defines the slicing plane
+    plane_normal: &'s Vertex,
+}
+
+/// Calculates the signed projection of a point onto the slicing plane normal.\
+/// Returning a scalar value that represents the height of the vertex in the direction of the plane’s normal.
+#[inline(always)]
+pub fn project_vertex_onto_plane(vertex: &Vertex, plane_normal: &Vertex) -> f64 {
+    vertex.dot(plane_normal)
 }
 
 impl<'s> TriangleTowerIterator<'s> {
-    pub fn new(tower: &'s TriangleTower) -> Self {
-        let z_height = tower.get_height_of_vertex(0);
+    pub fn new(tower: &'s TriangleTower, plane_normal: &'s Vertex) -> Self {
+        // Use the first vertex's projected distance to set the initial plane height
+        // todo check if this is correct
+        let plane_height = tower.get_height_of_vertex(0, plane_normal);
         Self {
-            z_height,
+            plane_height,
             tower,
             tower_vert_index: 0,
             active_rings: Vec::new(),
+            plane_normal,
         }
     }
 
-    pub fn advance_to_height(&mut self, z: f64) -> Result<(), SlicerErrors> {
-        while self.tower.get_height_of_vertex(self.tower_vert_index) < z
+    /// Move the iterator up to a specified height along the slicing plane's normal vector
+    // todo check fn changes
+    pub fn advance_to_height(&mut self, target_height: f64) -> Result<(), SlicerErrors> {
+        // round to the secend desimal place
+        let target_height = (target_height * 100.0).round() / 100.0;
+
+        let bace_height = self.tower.get_height_of_vertex(0, self.plane_normal);
+
+        println!("current index height: {}\ttarget_height: {}\tagusted target_height: {}", self.tower.get_height_of_vertex(self.tower_vert_index, self.plane_normal), target_height, target_height + bace_height);
+        // Iterate up the tower based on the projected height rather than the z-coordinate, target_height is relative to the lowest vertex
+        while self.tower.get_height_of_vertex(self.tower_vert_index, self.plane_normal) < target_height + bace_height
             && self.tower.tower_vertices.len() + 1 != self.tower_vert_index
         {
             let pop_tower_vert = &self.tower.tower_vertices[self.tower_vert_index];
 
-            // Create Frags from rings by removing current edges
+            // Update active rings by removing edges at the current vertex height
             self.active_rings = self
                 .active_rings
                 .drain(..)
@@ -430,20 +467,23 @@ impl<'s> TriangleTowerIterator<'s> {
 
             join_fragments(&mut self.active_rings);
 
+            // Move to the next vertex in the tower
             self.tower_vert_index += 1;
 
-            for ring in &self.active_rings {
-                if !ring.is_complete_ring() {
-                    return Err(SlicerErrors::TowerGeneration);
-                }
+            // ! why are their so many incomple rings?
+            // Check that all ring are complete
+            if self.active_rings.iter().any(|ring| { println!("{}", ring); !ring.is_complete_ring()}) {
+                return Err(SlicerErrors::TowerGeneration(self.plane_height));
             }
         }
 
-        self.z_height = z;
+        // Update plane height after advancing
+        self.plane_height = target_height;
 
         Ok(())
     }
 
+    /// Get intersection points of edges with the slicing plane at `plane_height`
     pub fn get_points(&self) -> Vec<Vec<Vertex>> {
         self.active_rings
             .iter()
@@ -452,11 +492,12 @@ impl<'s> TriangleTowerIterator<'s> {
                     .elements
                     .iter()
                     .filter_map(|e| {
-                        if let TowerRingElement::Edge {start_index, end_index, ..} = e {
-                            Some(line_z_intersection(
-                                self.z_height,
+                        if let TowerRingElement::Edge { start_index, end_index, .. } = e {
+                            Some(plane_intersection(
+                                self.plane_height,
                                 &self.tower.vertices[*start_index],
                                 &self.tower.vertices[*end_index],
+                                self.plane_normal,
                             ))
                         } else {
                             None
@@ -464,8 +505,10 @@ impl<'s> TriangleTowerIterator<'s> {
                     })
                     .collect();
 
-                // complete loop
-                points.push(points[0].clone());
+                // Close the loop by repeating the first point at the end
+                if !points.is_empty() {
+                    points.push(points[0].clone());
+                }
 
                 points
             })
@@ -474,12 +517,13 @@ impl<'s> TriangleTowerIterator<'s> {
 }
 
 pub fn create_towers(
-    models: &[(Vec<Vertex>, Vec<IndexedTriangle>)],
+    models: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)>,
+    plane_normal: &Vertex,
 ) -> Result<Vec<TriangleTower>, SlicerErrors> {
     models
-        .iter()
+        .into_par_iter()
         .map(|(vertices, triangles)| {
-            TriangleTower::from_triangles_and_vertices(triangles, vertices.clone())
+            TriangleTower::from_triangles_and_vertices(&triangles, vertices, plane_normal)
         })
         .collect()
 }
@@ -489,7 +533,7 @@ mod tests {
     use super::*;
 
     fn join_rings(mut first: TowerRing, second: TowerRing) -> TowerRing {
-        TowerRing::join_rings_in_place(&mut first, &second);
+        TowerRing::join_rings_in_place(&mut first, second);
 
         first
     }

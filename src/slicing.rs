@@ -2,11 +2,16 @@ use crate::{Object, Settings, Slice, SlicerErrors, TriangleTower, TriangleTowerI
 use geo::geometry::Coord;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-pub fn slice(towers: &[TriangleTower], settings: &Settings) -> Result<Vec<Object>, SlicerErrors> {
+// todo check and document
+pub fn slice(
+    towers: &[TriangleTower],
+    settings: &Settings,
+    plane_normal: &Vertex,
+) -> Result<Vec<Object>, SlicerErrors> {
     towers
         .par_iter()
         .map(|tower| {
-            let mut tower_iter = TriangleTowerIterator::new(tower);
+            let mut tower_iter = TriangleTowerIterator::new(tower, plane_normal);
 
             let mut layer = 0.0;
 
@@ -14,6 +19,7 @@ pub fn slice(towers: &[TriangleTower], settings: &Settings) -> Result<Vec<Object
                 std::iter::repeat(())
                     .enumerate()
                     .map(|(layer_count, ())| {
+                        println!("layer_count: {}", layer_count);
                         // Advance to the correct height
                         let layer_height = settings
                             .get_layer_settings(
@@ -41,13 +47,11 @@ pub fn slice(towers: &[TriangleTower], settings: &Settings) -> Result<Vec<Object
                     })
                     .collect();
 
-            let points = res_points?;
-
-            let slices: Result<Vec<Slice>, SlicerErrors> = points
+            let slices: Result<Vec<Slice>, SlicerErrors> = res_points?
                 .par_iter()
                 .enumerate()
                 .map(|(count, (bot, top, layer_loops))| {
-                    // Add this slice to the
+                    // Add this slice
                     Slice::from_multiple_point_loop(
                         layer_loops
                             .iter()
