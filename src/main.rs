@@ -202,8 +202,6 @@ fn angle_to_normal(slice_angle: f64) -> Vertex {
     println!("{}", slice_angle);
     // Convert slice angle from degrees to radians
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
-    // ! temp
-    // let slice_angle_radians = 45.0 * std::f64::consts::PI / 180.0;
 
     // Calculate the normal vector based on the angle
     // todo in XZ plane mode switch x and y then z and y
@@ -216,7 +214,7 @@ fn angle_to_normal(slice_angle: f64) -> Vertex {
     plane_normal
 }
 
-fn verts_per_layer_test(mut verts: Vec<Vertex>, plane_normal: &Vertex) -> Vec<u32> {
+fn verts_per_layer_test(verts: Vec<Vertex>, plane_normal: &Vertex) -> Vec<u32> {
     // Sort tower vertices based on their projection along the normal vector
     // verts.sort_by(|a, b| {
     //     // Calculate projection for vertces

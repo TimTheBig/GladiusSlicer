@@ -67,7 +67,7 @@ impl TriangleTower {
             });
 
             // depending what is the next vertex is its either leading or trailing
-            if vertices[index_tri.verts[1]] < vertices[index_tri.verts[2]] {
+            if vertices[index_tri.verts[1]].dot(normal) < vertices[index_tri.verts[2]].dot(normal) {
                 future_tower_vert[index_tri.verts[1]].push(TriangleEvent::TrailingEdge {
                     trailing_edge: index_tri.verts[2],
                     triangle: triangle_index,
@@ -96,7 +96,7 @@ impl TriangleTower {
             .collect();
 
 
-        // ! this can cose incomplet rings
+        // ! this can case incomplet rings
         // Sort tower vertices lowest to highest based on their projection along the normal vector
         res_tower_vertices.sort_by(|a, b| {
             // project vertices on to plane and comp
@@ -115,7 +115,7 @@ impl TriangleTower {
         if index >= self.tower_vertices.len() {
             f64::INFINITY
         } else {
-            self.vertices[self.tower_vertices[index].start_index].dot(plane_normal)
+            project_vertex_onto_plane(&self.vertices[self.tower_vertices[index].start_index], plane_normal)
         }
     }
 }
@@ -179,7 +179,7 @@ impl TowerRing {
             }
         }
 
-        // ? should this be >=
+        // ? should this be >= as "single" implise 1
         // remove all fragments that are single sized and faces. They ends with that vertex
         frags.retain(|frag| frag.elements.len() > 1);
 
