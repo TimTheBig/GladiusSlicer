@@ -287,10 +287,14 @@
       ]
     },
     "slice_angle": {
-      "description": "The tilt angle of the slicing plane from the Z-axis  in degrees",
-      "type": "number",
+      "description": "The tilt angle of the slicing plane from the Z-axis in degrees",
+      "type": [
+        "number",
+        "null"
+      ],
       "format": "double",
-      "maximum": 45.0
+      "maximum": 89.0,
+      "minimum": -89.0
     },
     "solid_infill_type": {
       "description": "Solid Infill type",
@@ -369,8 +373,7 @@
     "maximum_feedrate_e",
     "max_extruder_temp",
     "layer_settings",
-    "has_aux_fan",
-    "slice_angle"
+    "has_aux_fan"
   ],
   "$defs": {
     "Coord": {
