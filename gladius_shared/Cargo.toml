@@ -13,7 +13,7 @@ zip = { version = "2.2.0", features = ["bzip2", "deflate", "deflate64", "lzma", 
 nom_stl = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
 
-serde-xml-rs = "0.6"
+serde-xml-rs = { version = "0.6", git = "https://github.com/TimTheBig/serde-xml-rs.git", package = "serde-xml-rust"}
 geo = {version = "0.29", features = ["use-serde"]}
 nalgebra = "0.33"
 deser-hjson = "2.2"

@@ -490,7 +490,7 @@ dependencies = [
  "nom_stl",
  "schemars",
  "serde",
- "serde-xml-rs",
+ "serde-xml-rust",
  "serde_json",
  "zip",
 ]
@@ -1044,14 +1044,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-xml-rs"
+name = "serde-xml-rust"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb3aa78ecda1ebc9ec9847d5d3aba7d618823446a049ba2491940506da6e2782"
+source = "git+https://github.com/TimTheBig/serde-xml-rs.git#ccca21251e7c33c65052c8911302749e061077b0"
 dependencies = [
  "log",
  "serde",
- "thiserror 1.0.69",
+ "thiserror",
  "xml-rs",
 ]
 
@@ -1175,31 +1174,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
-dependencies = [
- "thiserror-impl 1.0.69",
-]
-
-[[package]]
-name = "thiserror"
 version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c006c85c7651b3cf2ada4584faa36773bd07bac24acfb39f3c431b36d7e667aa"
 dependencies = [
- "thiserror-impl 2.0.3",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.69"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "thiserror-impl",
 ]
 
 [[package]]
@@ -1468,7 +1447,7 @@ dependencies = [
  "indexmap",
  "lzma-rs",
  "memchr",
- "thiserror 2.0.3",
+ "thiserror",
  "time",
  "zopfli",
  "zstd",
