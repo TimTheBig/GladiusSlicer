@@ -450,6 +450,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "geo-validity-check"
+version = "0.1.1"
+source = "git+https://github.com/TimTheBig/geo-validity-check.git#c0b7448781c4eef488ebffa40ad0bef71f52a8df"
+dependencies = [
+ "float_next_after",
+ "geo",
+ "geo-types",
+ "num-traits",
+ "robust",
+]
+
+[[package]]
 name = "geographiclib-rs"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -484,8 +496,10 @@ version = "0.5.0"
 dependencies = [
  "deser-hjson",
  "geo",
+ "geo-validity-check",
  "gladius_proc_macros",
  "itertools 0.13.0",
+ "log",
  "nalgebra",
  "nom_stl",
  "schemars",
