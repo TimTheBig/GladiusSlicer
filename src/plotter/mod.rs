@@ -509,7 +509,8 @@ pub fn convert_objects_into_moves(objects: Vec<Object>, settings: &Settings) -> 
                 .into_iter()
                 .enumerate()
                 .map(|(layer_num, mut slice)| {
-                    let layer_settings = settings.get_layer_settings(layer_num as u32, slice.top_height);
+                    let layer_settings =
+                        settings.get_layer_settings(layer_num as u32, slice.top_height);
                     let mut moves = vec![];
                     moves.push(Command::ChangeObject { object: object_num });
                     moves.push(Command::LayerChange {

@@ -14,6 +14,8 @@ members = [
 
 [features]
 json_schema_gen = ["gladius_shared/json_schema_gen"]
+[lints.clippy]
+allow-unwrap-in-tests = "allow"
 
 [dependencies]
 clap = { version = "4", features = ["derive"]}

@@ -114,6 +114,9 @@ pub enum SlicerErrors {
 
     /// An angle of 90 or more and -90 or less can be represented with a smaller angle
     SliceAngleOutOfRange(f64),
+
+    /// Invalid bed exclusion polygon
+    InvalidBedExcludeArea(String),
 }
 
 impl SlicerErrors {
@@ -194,6 +197,9 @@ impl SlicerErrors {
             },
             SlicerErrors::SliceAngleOutOfRange(angle) => {
                 (0x1017, format!("The slice angle setting must in in a range of -89 to 89 as a higher angle can be redusted, angle was: {}", angle))
+            },
+            SlicerErrors::InvalidBedExcludeArea(reason) => {
+                (0x1018, format!("The settings file contains an invalid bed exclusion area: {:?}", reason))
             },
         }
     }

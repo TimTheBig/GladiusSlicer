@@ -21,6 +21,9 @@ serde_json = "^1.0.85"
 itertools = "0.13"
 gladius_proc_macros = { path = "./gladius_proc_macros" }
 
+geo-validity-check = { version = "0.1.1", git = "https://github.com/TimTheBig/geo-validity-check.git" }
+log = "0.4.22"
+
 # json schema gen
 [dependencies.schemars]
 version = "1.0.0-alpha.17"
