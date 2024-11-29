@@ -177,15 +177,11 @@ fn main() {
     // !
     println!("{:?}", verts_per_layer_test(models[0].0.clone(), &plane_normal));
     // !
-    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(models, &plane_normal), send_messages);
+    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(models, &plane_normal), &state_context);
     state_update("Creating Towers", &mut state_context);
 
-    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(&models, &plane_normal), &state_context);
-
-    let objects = handle_err_or_return(slice(&towers, &settings, &plane_normal), send_messages);
-    state_update("Slicing", &mut state_context);
-
     let objects = handle_err_or_return(slice(&towers, &settings, &plane_normal), &state_context);
+    state_update("Slicing", &mut state_context);
 
     state_update("Generating Moves", &mut state_context);
 
@@ -425,7 +421,7 @@ fn handle_setting_validation(res: SettingsValidationResult, state_context: &Stat
 }
 
 #[cfg(test)]
-mod test {
+mod test_main {
     use super::*;
 
     #[test]

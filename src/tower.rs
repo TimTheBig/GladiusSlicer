@@ -1,22 +1,18 @@
 use crate::SlicerErrors;
 use crate::utils::lerp;
 use gladius_shared::types::{IndexedTriangle, Vertex};
-use ordered_float::OrderedFloat;
 use rayon::prelude::*;
-use std::collections::BinaryHeap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 /*
-
     Rough algoritim
 
     build tower
         For each point store all edges and face connected to but above it
 
     progress up tower
-!*/
-
+*/
 
 
 /// Calculate the **vertex**, the Line from `v_start` to `v_end` where
@@ -47,8 +43,8 @@ fn plane_intersection(plane_height: f64, v_start: &Vertex, v_end: &Vertex, norma
 
 /// A set of triangles and their associated vertices
 pub struct TriangleTower {
-    vertices: Vec<Vertex>,
-    tower_vertices: BinaryHeap<TowerVertex>,
+    pub vertices: Vec<Vertex>,
+    tower_vertices: Vec<TowerVertex>,
 }
 
 impl TriangleTower {
@@ -71,7 +67,7 @@ impl TriangleTower {
                 triangle: triangle_index,
             });
 
-            // depending what is the next vertex is its either leading or trailing
+            // depending what the next vertex is its either leading or trailing
             if vertices[index_tri.verts[1]].dot(normal) < vertices[index_tri.verts[2]].dot(normal) {
                 future_tower_vert[index_tri.verts[1]].push(TriangleEvent::TrailingEdge {
                     trailing_edge: index_tri.verts[2],
@@ -87,8 +83,7 @@ impl TriangleTower {
 
         // for each triangle event, add it to the lowest vertex and
         // create a list of all vertices and there above edges
-
-        let mut tower_vertices: BinaryHeap<TowerVertex> = future_tower_vert
+        let mut tower_vertices: Vec<TowerVertex> = future_tower_vert
             .into_iter()
             .enumerate()
             .map(|(index, events)| {
@@ -104,7 +99,7 @@ impl TriangleTower {
 
         // ! this can case incomplet rings
         // Sort tower vertices lowest to highest based on their projection along the normal vector
-        res_tower_vertices.sort_by(|a, b| {
+        tower_vertices.sort_by(|a, b| {
             // project vertices on to plane and comp
             vertices[a.start_index].dot(normal)
                 .partial_cmp(&vertices[b.start_index].dot(normal))
@@ -113,21 +108,22 @@ impl TriangleTower {
 
         Ok(Self {
             vertices,
-            tower_vertices: res_tower_vertices,
+            tower_vertices,
         })
     }
 
 
-    pub fn get_height_of_next_vertex(&self, plane_normal: &Vertex) -> f64 {
-        self.tower_vertices
-            .peek()
-            .map(|vert: &TowerVertex| project_vertex_onto_plane(&vert.start_vert, plane_normal))
-            .unwrap_or(f64::INFINITY)
+    pub fn get_height_of_vertex(&self, index: usize, plane_normal: &Vertex) -> f64 {
+        if index >= self.tower_vertices.len() {
+            f64::INFINITY
+        } else {
+            project_vertex_onto_plane(&self.vertices[self.tower_vertices[index].start_index], plane_normal)
+        }
     }
 }
 
 /// A vecter of [`TowerRing`]s with a start index, made of triangles
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct TowerVertex {
     pub next_ring_fragments: Vec<TowerRing>,
     pub start_index: usize,
@@ -455,13 +451,13 @@ fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<T
 // A ring can be joined if its last element matches another rings first element
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
     //early return for empty fragments
-    if fragments.len() == 0 {
+    if fragments.is_empty() {
         return;
     }
 
-    //Sort elements for binary search
+    // Sort elements for binary search
     // sorted by the first element in the tower
-    fragments.sort();
+    // fragments.sort();
     let mut first_pos = fragments.len() - 1;
     while first_pos > 0 {
         //binary search for a matching first element to the current pos last element
@@ -488,7 +484,7 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
                 let first_r = fragments
                     .get_mut(first_pos)
                     .expect("Index is validated by loop ");
-                TowerRing::join_rings_in_place(first_r, &removed);
+                TowerRing::join_rings_in_place(first_r, removed);
             } else {
                 // skip already complete elements
                 first_pos -= 1;
@@ -547,7 +543,7 @@ impl<'s> TriangleTowerIterator<'s> {
         while self.tower.get_height_of_vertex(self.tower_vert_index, self.plane_normal) < target_height + bace_height
             && !self.tower.tower_vertices.is_empty()
         {
-            let pop_tower_vert = self.tower.tower_vertices.pop().expect("Validated above");
+            let pop_tower_vert = &self.tower.tower_vertices[self.tower_vert_index];
 
             // Update active rings by removing edges at the current vertex height
             self.active_rings = self
@@ -560,7 +556,7 @@ impl<'s> TriangleTowerIterator<'s> {
                 })
                 .collect();
 
-            self.active_rings.extend(pop_tower_vert.next_ring_fragments);
+            self.active_rings.extend(pop_tower_vert.next_ring_fragments.clone());
 
             join_fragments(&mut self.active_rings);
 

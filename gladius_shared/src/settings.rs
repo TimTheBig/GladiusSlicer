@@ -12,11 +12,8 @@ use gladius_proc_macros::Settings;
 #[cfg(feature = "json_schema_gen")]
 /// json schema gen
 use schemars::{schema_for, JsonSchema};
-use geo::{Contains, LinesIter, MultiPolygon};
 use geo_validity_check::Valid;
-use gladius_proc_macros::Settings;
-use log::{info, trace};
-use nalgebra::Point2;
+use log::trace;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -850,7 +847,7 @@ impl Default for FanSettings {
 
 /// Support settings
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct SupportSettings {
     /// Angle to start production supports in degrees
     pub max_overhang_angle: f64,
@@ -861,7 +858,7 @@ pub struct SupportSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct SkirtSettings {
     /// the number of layer to generate the skirt
     pub layers: u32,
@@ -872,7 +869,7 @@ pub struct SkirtSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct RetractionWipeSettings {
     /// The speed the retract wipe move
     pub speed: f64,
