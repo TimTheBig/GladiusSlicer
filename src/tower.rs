@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 use crate::SlicerErrors;
 use crate::utils::lerp;
 use gladius_shared::types::{IndexedTriangle, Vertex};
@@ -112,7 +114,7 @@ impl TriangleTower {
         })
     }
 
-
+    /// Gets the height of a vertex at an index
     pub fn get_height_of_vertex(&self, index: usize, plane_normal: &Vertex) -> f64 {
         if index >= self.tower_vertices.len() {
             f64::INFINITY
@@ -158,6 +160,7 @@ impl PartialEq for TowerVertex {
 /// This needs to be checked with [`TowerRing::is_complete_ring`]
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TowerRing {
+    /// The elements that make up the ring
     elements: Vec<TowerRingElement>,
 }
 
@@ -238,9 +241,12 @@ impl PartialOrd for TowerRing {
 /// Face or Edge of a [`TowerRing`]
 #[derive(Clone, Debug, Eq)]
 enum TowerRingElement {
+    /// A tri
     Face {
+        /// The index of the tri
         triangle_index: usize,
     },
+    /// A line connecting two vertices
     Edge {
         start_index: usize,
         end_index: usize,
@@ -447,8 +453,8 @@ fn join_triangle_event(events: &[TriangleEvent], starting_point: usize) -> Vec<T
     element_list
 }
 
-// Join fragmented rings together to for new rings
-// A ring can be joined if its last element matches another rings first element
+/// Join fragmented rings together to for new rings
+/// A ring can be joined if its last element matches another rings first element
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
     //early return for empty fragments
     if fragments.is_empty() {
@@ -457,6 +463,7 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
 
     // Sort elements for binary search
     // sorted by the first element in the tower
+    // todo check if sort is needed
     // fragments.sort();
     let mut first_pos = fragments.len() - 1;
     while first_pos > 0 {
@@ -472,9 +479,9 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
                     .expect("Tower rings must contain elements ")
             },
         ) {
-            //Test if this is a complete ring. ie the rings first element and last are indentical
+            // Test if this is a complete ring. ie the rings first element and last are identical
             if index != first_pos {
-                // if the removed element is less that the current element the currenly element will be moved by the remove command
+                // if the removed element is less that the current element the currently element will be moved by the remove command
                 if index < first_pos {
                     first_pos -= 1;
                 }
@@ -496,6 +503,7 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
     }
 }
 
+/// A struct that helps iterate through a [`TriangleTower`] by holding information about were it is in the tower
 pub struct TriangleTowerIterator<'s> {
     /// The [`TriangleTower`] that is iterated through
     pub tower: &'s TriangleTower,
@@ -517,9 +525,9 @@ pub fn project_vertex_onto_plane(vertex: &Vertex, plane_normal: &Vertex) -> f64 
 }
 
 impl<'s> TriangleTowerIterator<'s> {
+    /// Make a new `TriangleTowerIterator` with empty active_rings and a tower_vert_index of 0
     pub fn new(tower: &'s TriangleTower, plane_normal: &'s Vertex) -> Self {
         // Use the first vertex's projected distance to set the initial plane height
-        // todo check if this is correct
         let plane_height = tower.get_height_of_vertex(0, plane_normal);
         Self {
             plane_height,
@@ -609,6 +617,7 @@ impl<'s> TriangleTowerIterator<'s> {
     }
 }
 
+/// Creates a `TriangleTower` for each model in parallel
 pub fn create_towers(
     models: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)>,
     plane_normal: &Vertex,

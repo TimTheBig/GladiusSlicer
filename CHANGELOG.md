@@ -15,7 +15,7 @@
 - Other Settings files in settings files are now in reference to that files path
 - Add simple-input command
 - Add command to output settings
-- Settings now are outputed to gcode
+- Settings now are outputted to gcode
  
 
 ### Fixes
