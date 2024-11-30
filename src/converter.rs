@@ -12,10 +12,10 @@ pub fn convert(
 ) -> Result<(), SlicerErrors> {
     let mut current_z = 0.0;
     let mut layer_count = 0;
-    let mut current_object = None;
+    let mut current_object: Option<usize> = None;
     let mut write_buf = BufWriter::new(write);
 
-   // Add the slicing date to the g-code
+    // Add the slicing date to the g-code
     writeln!(
         write_buf,
         ";========== date: {} ==================",

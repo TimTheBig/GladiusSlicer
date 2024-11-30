@@ -657,7 +657,7 @@
         "acceleration": {
           "anyOf": [
             {
-              "$ref": "#/$defs/MovementParameter"
+              "$ref": "#/$defs/PartialMovementParameter"
             },
             {
               "type": "null"
@@ -681,7 +681,7 @@
         "extrusion_width": {
           "anyOf": [
             {
-              "$ref": "#/$defs/MovementParameter"
+              "$ref": "#/$defs/PartialMovementParameter"
             },
             {
               "type": "null"
@@ -762,12 +762,88 @@
         "speed": {
           "anyOf": [
             {
-              "$ref": "#/$defs/MovementParameter"
+              "$ref": "#/$defs/PartialMovementParameter"
             },
             {
               "type": "null"
             }
           ]
+        }
+      }
+    },
+    "PartialMovementParameter": {
+      "description": "Partial Version of the struct #struct_name_ident",
+      "type": "object",
+      "properties": {
+        "bridge": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "exterior_inner_perimeter": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "exterior_surface_perimeter": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "infill": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "interior_inner_perimeter": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "interior_surface_perimeter": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "solid_infill": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "solid_top_infill": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "support": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "travel": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
         }
       }
     },

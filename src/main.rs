@@ -1,5 +1,5 @@
-#![deny(clippy::unwrap_used)]
-#![warn(clippy::all, clippy::perf, clippy::missing_const_for_fn)]
+#![deny(clippy::unwrap_used, clippy::perf)]
+#![warn(clippy::all, clippy::missing_const_for_fn)]
 
 use clap::Parser;
 use gladius_shared::loader::{Loader, STLLoader, ThreeMFLoader};
@@ -301,10 +301,10 @@ fn verts_per_layer_test(verts: Vec<Vertex>, plane_normal: &Vertex) -> Vec<u32> {
 }
 
 /// Display info about the print; time and filament info
-fn print_info_message( state_context: &StateContext, moves: &[Command], settings: &Settings) {
+fn print_info_message(state_context: &StateContext, moves: &[Command], settings: &Settings) {
     let cv = calculate_values(moves, settings);
 
-    match state_context.display_type{
+    match state_context.display_type {
         DisplayType::Message => {
             let message = Message::CalculatedValues(cv);
             bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)

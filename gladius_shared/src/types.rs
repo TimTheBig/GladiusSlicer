@@ -12,8 +12,8 @@ use nalgebra::Point3;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::ops::Sub;
 use std::fmt::Display;
+use std::ops::Sub;
 
 /// A single slice of an object containing it's current plotting status.
 pub struct Slice {

@@ -565,7 +565,7 @@ impl<'s> TriangleTowerIterator<'s> {
 
             // ! why are their so many incomple rings?
             // Check that all ring are complete
-            if self.active_rings.iter().any(|ring| { println!("{}", ring); !ring.is_complete_ring()}) {
+            if self.active_rings.iter().any(|ring| { /* ! temp */ println!("{}", ring); !ring.is_complete_ring()}) {
                 return Err(SlicerErrors::TowerGeneration(self.plane_height));
             }
         }

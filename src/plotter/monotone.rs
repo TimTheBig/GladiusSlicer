@@ -1,4 +1,4 @@
-use crate::utils::{orientation, lerp, Orientation};
+use crate::utils::{lerp, orientation, Orientation};
 use geo::{Coord, Polygon, SimplifyVwPreserve};
 use geo_svg::{Color, ToSvg};
 use itertools::Itertools;
