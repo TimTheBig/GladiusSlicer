@@ -2,7 +2,9 @@ use crate::{Command, Settings};
 use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMapContext};
 use gladius_shared::{error::SlicerErrors, settings::SettingsPrint, types::RetractionType};
 use std::io::{BufWriter, Write};
+use time::format_description::well_known::Iso8601;
 
+/// Convert `Command` to g-code then output it as a file
 pub fn convert(
     cmds: &[Command],
     settings: &Settings,
@@ -13,11 +15,18 @@ pub fn convert(
     let mut current_object = None;
     let mut write_buf = BufWriter::new(write);
 
-    //output the settings to the gcode file
+   // Add the slicing date to the g-code
+    writeln!(
+        write_buf,
+        ";========== date: {} ==================",
+        time::OffsetDateTime::now_utc().format(&Iso8601::DATE).expect("This is a valid format")
+    )
+    .map_err(|_| SlicerErrors::FileWriteError)?;
 
+    // Output the settings to the g-code file
     for line in settings.to_strings() {
         writeln!(
-            //lending ; to make comment
+            // lending ; to make it comment
             write_buf,
             "; {}",
             line

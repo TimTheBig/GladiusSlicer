@@ -10,7 +10,9 @@ use std::{
 };
 
 pub struct StateContext {
+    /// Whether to use Message or StdOut
     pub display_type: DisplayType,
+    /// Start time of slicing
     start_time: SystemTime,
     last_time: SystemTime,
 }
