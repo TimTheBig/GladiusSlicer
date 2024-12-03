@@ -174,7 +174,7 @@ fn main() {
 
     state_update("Creating Towers", &mut state_context);
 
-    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(&models), &state_context);
+    let towers: Vec<TriangleTower<_>> = handle_err_or_return(create_towers::<Vertex>( &models), &state_context);
 
     state_update("Slicing", &mut state_context);
 

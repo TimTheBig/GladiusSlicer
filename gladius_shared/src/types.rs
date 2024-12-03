@@ -229,18 +229,26 @@ impl From<Vertex> for Point3<f64> {
         Point3::new(v.x, v.y, v.z)
     }
 }
+impl Eq for Vertex {}
 
-impl PartialOrd for Vertex {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl Ord for Vertex {
+    fn cmp(&self, other: &Self) -> Ordering {
         if self.z != other.z {
-            self.z.partial_cmp(&other.z)
+            self.z.partial_cmp(&other.z).expect("Non-NAN")
         } else if self.y != other.y {
-            self.y.partial_cmp(&other.y)
+            self.y.partial_cmp(&other.y).expect("Non-NAN")
         } else {
-            self.x.partial_cmp(&other.x)
+            self.x.partial_cmp(&other.x).expect("Non-NAN")
         }
     }
 }
+
+impl PartialOrd for Vertex {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 
 impl Transform {
     /// create a new transform for translation
