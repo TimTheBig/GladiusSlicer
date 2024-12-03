@@ -82,11 +82,13 @@ struct Args {
 
     #[arg(
         long = "print_settings",
+        conflicts_with = "message",
         help = "Print the final combined settings out to Stdout and Terminate. Verbose level 4 will print but continue."
     )]
     print_settings: bool,
     #[arg(
         long = "simple_input",
+        alias = "simple",
         help = "The input should only be a list of files that will be auto translated to the center of the build plate."
     )]
     simple_input: bool,

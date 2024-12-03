@@ -5,6 +5,7 @@ use crate::{
 };
 use std::path::PathBuf;
 use std::str::FromStr;
+use log::error;
 
 /// The raw triangles and vertices of a model
 type ModelRawData = (Vec<Vertex>, Vec<IndexedTriangle>);
@@ -23,6 +24,7 @@ pub fn load_models(
             let object: InputObject = if simple_input {
                 InputObject::Auto(value.clone())
             } else {
+                error!("Use --simple_input if you don't what to specify a placement");
                 deser_hjson::from_str(&value).map_err(|_| SlicerErrors::InputMisformat)?
             };
 

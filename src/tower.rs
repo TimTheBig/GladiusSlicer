@@ -99,7 +99,7 @@ impl TriangleTower {
             .collect();
 
 
-        // ! this can case incomplet rings
+        // ! this can case incomplte rings
         // Sort tower vertices lowest to highest based on their projection along the normal vector
         tower_vertices.sort_by(|a, b| {
             // project vertices on to plane and comp
@@ -241,7 +241,7 @@ impl PartialOrd for TowerRing {
 /// Face or Edge of a [`TowerRing`]
 #[derive(Clone, Debug, Eq)]
 enum TowerRingElement {
-    /// A tri
+    /// A triangle
     Face {
         /// The index of the tri
         triangle_index: usize,
