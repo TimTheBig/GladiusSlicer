@@ -10,6 +10,12 @@
 - Added a profile for the Bambu Lab x1c
 - Added a profile for Bambu Lab PLA
 - Added a json schema
+- Json can be passed into the command line using the -S command
+- Other Settings files in settings files are now in reference to that files path
+- Add simple-input command
+- Add command to output settings
+- Settings now are outputed to gcode
+ 
 
 ### Fixes
 

@@ -23,3 +23,6 @@ gladius_proc_macros = { path = "./gladius_proc_macros" }
 
 # json schema gen
 schemars = { version = "1.0.0-alpha.15", git = "https://github.com/TimTheBig/schemars.git" , features = ["geo028"], optional = true }
+geo-validity-check = "0.1.0"
+
+log = "0.4.22"

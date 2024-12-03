@@ -4,7 +4,48 @@ use gladius_shared::messages::Message;
 use gladius_shared::warning::SlicerWarnings;
 use log::{error, info, warn};
 use nalgebra::Vector2;
-use std::io::Write;
+use std::{
+    io::Write,
+    time::{Duration, SystemTime},
+};
+
+pub struct StateContext {
+    pub display_type: DisplayType,
+    start_time: SystemTime,
+    last_time: SystemTime,
+}
+
+impl StateContext {
+    pub fn new(display_type: DisplayType) -> StateContext {
+        let time = SystemTime::now();
+        StateContext {
+            display_type,
+            start_time: time,
+            last_time: time,
+        }
+    }
+
+    pub fn get_elapsed_time(&mut self) -> Duration {
+        let time = SystemTime::now();
+        let elapsed = SystemTime::now()
+            .duration_since(self.last_time)
+            .expect("Time can only go forward");
+        self.last_time = time;
+        elapsed
+    }
+
+    pub fn get_total_elapsed_time(&self) -> Duration {
+        let elapsed = SystemTime::now()
+            .duration_since(self.start_time)
+            .expect("Time can only go forward");
+        elapsed
+    }
+}
+
+pub enum DisplayType {
+    Message,
+    StdOut,
+}
 
 pub fn show_error_message(error: &SlicerErrors) {
     let (error_code, message) = error.get_code_and_message();
@@ -44,15 +85,20 @@ pub fn send_warning_message(warning: SlicerWarnings) {
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
-pub fn display_state_update(state_message: &str, send_message: bool) {
-    if send_message {
-        let stdout = std::io::stdout();
-        let mut stdio_lock = stdout.lock();
-        let message = Message::StateUpdate(state_message.to_string());
-        bincode::serialize_into(&mut stdio_lock, &message).expect("Write Limit should not be hit");
-        stdio_lock.flush().expect("Standard Out should be limited");
-    } else {
-        info!("{}", state_message);
+pub fn state_update(state_message: &str, state_context: &mut StateContext) {
+    match state_context.display_type {
+        DisplayType::Message => {
+            let stdout = std::io::stdout();
+            let mut stdio_lock = stdout.lock();
+            let message = Message::StateUpdate(state_message.to_string());
+            bincode::serialize_into(&mut stdio_lock, &message)
+                .expect("Write Limit should not be hit");
+            stdio_lock.flush().expect("Standard Out should be limited");
+        }
+        DisplayType::StdOut => {
+            let duration = state_context.get_elapsed_time();
+            info!("{}\t{}", state_message, duration.as_millis());
+        }
     }
 }
 

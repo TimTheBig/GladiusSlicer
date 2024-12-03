@@ -1,10 +1,11 @@
 #![deny(clippy::unwrap_used)]
 #![warn(clippy::all, clippy::perf, clippy::missing_const_for_fn)]
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use clap::Parser;
 use gladius_shared::loader::{Loader, STLLoader, ThreeMFLoader};
 use gladius_shared::types::*;
+use input::load_settings;
+use utils::{DisplayType, StateContext};
 
 use crate::plotter::convert_objects_into_moves;
 use crate::tower::{create_towers, TriangleTower, TriangleTowerIterator};
@@ -22,13 +23,12 @@ use crate::bounds_checking::{check_model_bounds, check_moves_bounds};
 use crate::calculation::calculate_values;
 use crate::command_pass::{CommandPass, OptimizePass, SlowDownLayerPass};
 use crate::converter::convert;
-use crate::input::files_input;
 use crate::plotter::polygon_operations::PolygonOperations;
 use crate::slice_pass::*;
 use crate::slicing::slice;
 use crate::utils::{
-    display_state_update, send_error_message, send_warning_message, show_error_message,
-    show_warning_message,
+    send_error_message, send_warning_message, show_error_message, show_warning_message,
+    state_update,
 };
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::messages::Message;
@@ -49,13 +49,22 @@ mod optimizer;
 mod plotter;
 mod slice_pass;
 mod slicing;
+mod test;
 mod tower;
 mod utils;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
+#[clap(group(
+    clap::ArgGroup::new("settings-group")
+        .required(true)
+        .args(&["settings_file_path", "settings_json"]),
+))]
 struct Args {
-    #[arg(required = true)]
+    #[arg(
+        required = true,
+        help = "The input files and there translations.\nBy default it takes a list of json strings that represents how the models should be loaded and translated.\nSee simple_input for an alterantive command. "
+    )]
     input: Vec<String>,
 
     #[arg(short = 'o', help = "Sets the output dir")]
@@ -65,11 +74,22 @@ struct Args {
     verbose: u8,
 
     #[arg(short = 's', help = "Sets the settings file to use")]
-    settings: Option<String>,
-
+    settings_file_path: Option<String>,
+    #[arg(short = 'S', help = "The contents of a json settings file.")]
+    settings_json: Option<String>,
     #[arg(short = 'm', help = "Use the Message System (useful for interprocess communication)")]
     message: bool,
 
+    #[arg(
+        long = "print_settings",
+        help = "Print the final combined settings out to Stdout and Terminate. Verbose level 4 will print but continue."
+    )]
+    print_settings: bool,
+    #[arg(
+        long = "simple_input",
+        help = "The input should only be a list of files that will be auto translated to the center of the build plate."
+    )]
+    simple_input: bool,
     #[arg(
         short = 'j',
         help = "Sets the number of threads to use in the thread pool (defaults to number of CPUs)"
@@ -93,9 +113,13 @@ fn main() {
             .expect("Only call to build global");
     }
 
-    let send_messages = args.message;
+    let mut state_context = StateContext::new(if args.message {
+        DisplayType::Message
+    } else {
+        DisplayType::StdOut
+    });
 
-    if !send_messages {
+    if !args.message {
         // Vary the output based on how many times the user used the "verbose" flag
         // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
 
@@ -111,52 +135,79 @@ fn main() {
             .expect("Only Logger Setup");
     }
 
-    display_state_update("Loading Inputs", send_messages);
-    let (models, settings) = handle_err_or_return(
-        files_input(args.settings.as_deref(), Some(args.input)),
-        send_messages,
+    state_update("Loading Inputs", &mut state_context);
+
+    let settings_json = args.settings_json.unwrap_or_else(|| {
+        handle_err_or_return(
+            input::load_settings_json(
+                args.settings_file_path
+                    .as_deref()
+                    .expect("CLAP should handle requring a settings option to be Some"),
+            ),
+            &state_context,
+        )
+    });
+
+    let settings = handle_err_or_return(
+        load_settings(args.settings_file_path.as_deref(), &settings_json),
+        &state_context,
     );
 
-    handle_err_or_return(check_model_bounds(&models, &settings), send_messages);
+    let models = handle_err_or_return(
+        crate::input::load_models(Some(args.input), &settings, args.simple_input),
+        &state_context,
+    );
+    if args.print_settings {
+        for line in gladius_shared::settings::SettingsPrint::to_strings(&settings) {
+            println!("{}", line);
+        }
+        std::process::exit(0);
+    } else if log::log_enabled!(log::Level::Trace) {
+        for line in gladius_shared::settings::SettingsPrint::to_strings(&settings) {
+            log::trace!("{}", line);
+        }
+    }
 
-    handle_setting_validation(settings.validate_settings(), send_messages);
+    handle_err_or_return(check_model_bounds(&models, &settings), &state_context);
 
-    display_state_update("Creating Towers", send_messages);
+    handle_setting_validation(settings.validate_settings(), &state_context);
 
-    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(&models), send_messages);
+    state_update("Creating Towers", &mut state_context);
 
-    display_state_update("Slicing", send_messages);
+    let towers: Vec<TriangleTower> = handle_err_or_return(create_towers(&models), &state_context);
 
-    let objects = handle_err_or_return(slice(&towers, &settings), send_messages);
+    state_update("Slicing", &mut state_context);
 
-    display_state_update("Generating Moves", send_messages);
+    let objects = handle_err_or_return(slice(towers, &settings), &state_context);
+
+    state_update("Generating Moves", &mut state_context);
 
     let mut moves = handle_err_or_return(
-        generate_moves(objects, &settings, send_messages),
-        send_messages,
+        generate_moves(objects, &settings, &mut state_context),
+        &state_context,
     );
 
-    handle_err_or_return(check_moves_bounds(&moves, &settings), send_messages);
+    handle_err_or_return(check_moves_bounds(&moves, &settings), &state_context);
 
-    display_state_update("Optimizing", send_messages);
+    state_update("Optimizing", &mut state_context);
     debug!("Optimizing {} Moves", moves.len());
 
     OptimizePass::pass(&mut moves, &settings);
-    display_state_update("Slowing Layer Down", send_messages);
+    state_update("Slowing Layer Down", &mut state_context);
 
     SlowDownLayerPass::pass(&mut moves, &settings);
 
-    if send_messages {
+    if let DisplayType::Message = state_context.display_type {
         let message = Message::Commands(moves.clone());
         bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
             .expect("Write Limit should not be hit");
     }
-    display_state_update("Calculate Values", send_messages);
+    state_update("Calculate Values", &mut state_context);
 
     // Display info about the print
-    print_info_message(send_messages, &moves, &settings);
+    print_info_message(&state_context, &moves, &settings);
 
-    display_state_update("Outputting G-code", send_messages);
+    state_update("Outputting G-code", &mut state_context);
 
     // Output the GCode
     if let Some(file_path) = &args.output {
@@ -170,106 +221,123 @@ fn main() {
                     File::create(file_path).map_err(|_| SlicerErrors::FileCreateError {
                         filepath: file_path.to_string(),
                     }),
-                    send_messages,
+                    &state_context,
                 ),
             ),
-            send_messages,
+            &state_context,
         );
-    } else if send_messages {
-        // Output as message
-        let mut gcode: Vec<u8> = Vec::new();
-        handle_err_or_return(convert(&moves, &settings, &mut gcode), send_messages);
-        let message = Message::GCode(
-            String::from_utf8(gcode).expect("All write occur from write macro so should be utf8"),
-        );
-        bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
-            .expect("Write Limit should not be hit");
     } else {
-        // Output to stdout
-        let stdout = std::io::stdout();
-        let mut stdio_lock = stdout.lock();
-        debug!("Converting {} Moves", moves.len());
-        handle_err_or_return(convert(&moves, &settings, &mut stdio_lock), send_messages);
+        match state_context.display_type {
+            DisplayType::Message => {
+                // Output as message
+                let mut gcode: Vec<u8> = Vec::new();
+                handle_err_or_return(convert(&moves, &settings, &mut gcode), &state_context);
+                let message = Message::GCode(
+                    String::from_utf8(gcode)
+                        .expect("All write occur from write macro so should be utf8"),
+                );
+                bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
+                    .expect("Write Limit should not be hit");
+            }
+            DisplayType::StdOut => {
+                // Output to stdout
+                let stdout = std::io::stdout();
+                let mut stdio_lock = stdout.lock();
+                debug!("Converting {} Moves", moves.len());
+                handle_err_or_return(convert(&moves, &settings, &mut stdio_lock), &state_context);
+            }
+        }
     };
+
+    if let DisplayType::StdOut = state_context.display_type {
+        info!(
+            "Total slice time {} msec",
+            state_context.get_total_elapsed_time().as_millis()
+        );
+    }
 }
 
 /// Display info about the print; time and filament info
-fn print_info_message(send_messages: bool, moves: &[Command], settings: &Settings) {
+fn print_info_message( state_context: &StateContext, moves: &[Command], settings: &Settings) {
     let cv = calculate_values(moves, settings);
 
-    if send_messages {
-        let message = Message::CalculatedValues(cv);
-        bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
-            .expect("Write Limit should not be hit");
-    } else {
-        let (hour, min, sec, _) = cv.get_hours_minutes_seconds_fract_time();
-
-        info!(
-            "Total Time: {} hours {} minutes {:.3} seconds",
-            hour, min, sec
-        );
-        info!(
-            "Total Filament Volume: {:.3} cm^3",
-            cv.plastic_volume / 1000.0
-        );
-        info!("Total Filament Mass: {:.3} grams", cv.plastic_weight);
-        info!(
-            "Total Filament Length: {:.3} meters",
-            cv.plastic_length / 1000.0
-        );
-        info!(
-            "Total Filament Cost: ${:.2}",
-            (((cv.plastic_volume / 1000.0) * settings.filament.density) / 1000.0)
-                * settings.filament.cost
-        );
+    match state_context.display_type{
+        DisplayType::Message => {
+            let message = Message::CalculatedValues(cv);
+            bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
+                .expect("Write Limit should not be hit");
+        },
+        DisplayType::StdOut => {
+            let (hour, min, sec, _) = cv.get_hours_minutes_seconds_fract_time();
+    
+            info!(
+                "Total Time: {} hours {} minutes {:.3} seconds",
+                hour, min, sec
+            );
+            info!(
+                "Total Filament Volume: {:.3} cm^3",
+                cv.plastic_volume / 1000.0
+            );
+            info!("Total Filament Mass: {:.3} grams", cv.plastic_weight);
+            info!(
+                "Total Filament Length: {:.3} meters",
+                cv.plastic_length / 1000.0
+            );
+            info!(
+                "Total Filament Cost: ${:.2}",
+                (((cv.plastic_volume / 1000.0) * settings.filament.density) / 1000.0)
+                    * settings.filament.cost
+            );
+        },
     }
+
 }
 
 fn generate_moves(
     mut objects: Vec<Object>,
     settings: &Settings,
-    send_messages: bool,
+    state_context: &mut StateContext,
 ) -> Result<Vec<Command>, SlicerErrors> {
     // Creates Support Towers
-    SupportTowerPass::pass(&mut objects, settings, send_messages);
+    SupportTowerPass::pass(&mut objects, settings, state_context);
 
     // Adds a skirt
-    SkirtPass::pass(&mut objects, settings, send_messages);
+    SkirtPass::pass(&mut objects, settings, state_context);
 
     // Adds a brim
-    BrimPass::pass(&mut objects, settings, send_messages);
+    BrimPass::pass(&mut objects, settings, state_context);
 
     let v: Result<Vec<()>, SlicerErrors> = objects
-        .par_iter_mut()
+        .iter_mut()
         .map(|object| {
             let slices = &mut object.layers;
 
             // Shrink layer
-            ShrinkPass::pass(slices, settings, send_messages)?;
+            ShrinkPass::pass(slices, settings, state_context)?;
 
             // Handle Perimeters
-            PerimeterPass::pass(slices, settings, send_messages)?;
+            PerimeterPass::pass(slices, settings, state_context)?;
 
             // Handle Bridging
-            BridgingPass::pass(slices, settings, send_messages)?;
+            BridgingPass::pass(slices, settings, state_context)?;
 
             // Handle Top Layer
-            TopLayerPass::pass(slices, settings, send_messages)?;
+            TopLayerPass::pass(slices, settings, state_context)?;
 
             // Handle Top And Bottom Layers
-            TopAndBottomLayersPass::pass(slices, settings, send_messages)?;
+            TopAndBottomLayersPass::pass(slices, settings, state_context)?;
 
             // Handle Support
-            SupportPass::pass(slices, settings, send_messages)?;
+            SupportPass::pass(slices, settings, state_context)?;
 
             // Lightning Infill
-            LightningFillPass::pass(slices, settings, send_messages)?;
+            LightningFillPass::pass(slices, settings, state_context)?;
 
             // Fill Remaining areas
-            FillAreaPass::pass(slices, settings, send_messages)?;
+            FillAreaPass::pass(slices, settings, state_context)?;
 
             // Order the move chains
-            OrderPass::pass(slices, settings, send_messages)
+            OrderPass::pass(slices, settings, state_context)
         })
         .collect();
 
@@ -278,14 +346,13 @@ fn generate_moves(
     Ok(convert_objects_into_moves(objects, settings))
 }
 
-fn handle_err_or_return<T>(res: Result<T, SlicerErrors>, send_message: bool) -> T {
+fn handle_err_or_return<T>(res: Result<T, SlicerErrors>, state_context: &StateContext) -> T {
     match res {
         Ok(data) => data,
         Err(slicer_error) => {
-            if send_message {
-                send_error_message(slicer_error);
-            } else {
-                show_error_message(&slicer_error);
+            match state_context.display_type {
+                DisplayType::Message => send_error_message(slicer_error),
+                DisplayType::StdOut => show_error_message(&slicer_error),
             }
             std::process::exit(-1);
         }
@@ -293,21 +360,17 @@ fn handle_err_or_return<T>(res: Result<T, SlicerErrors>, send_message: bool) -> 
 }
 
 /// Sends an apropreate error/warning message for a `SettingsValidationResult`
-fn handle_setting_validation(res: SettingsValidationResult, send_message: bool) {
+fn handle_setting_validation(res: SettingsValidationResult, state_context: &StateContext) {
     match res {
         SettingsValidationResult::NoIssue => {}
-        SettingsValidationResult::Warning(slicer_warning) => {
-            if send_message {
-                send_warning_message(slicer_warning);
-            } else {
-                show_warning_message(&slicer_warning);
-            }
-        }
+        SettingsValidationResult::Warning(slicer_warning) => match state_context.display_type {
+            DisplayType::Message => send_warning_message(slicer_warning),
+            DisplayType::StdOut => show_warning_message(&slicer_warning),
+        },
         SettingsValidationResult::Error(slicer_error) => {
-            if send_message {
-                send_error_message(slicer_error);
-            } else {
-                show_error_message(&slicer_error);
+            match state_context.display_type {
+                DisplayType::Message => send_error_message(slicer_error),
+                DisplayType::StdOut => show_error_message(&slicer_error),
             }
             std::process::exit(-1);
         }

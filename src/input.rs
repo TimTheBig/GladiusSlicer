@@ -1,3 +1,5 @@
+use gladius_shared::settings;
+
 use crate::utils::show_error_message;
 use crate::{
     debug, info, IndexedTriangle, InputObject, Loader, OsStr, PartialSettingsFile, Path, STLLoader,
@@ -6,26 +8,27 @@ use crate::{
 use std::path::PathBuf;
 use std::str::FromStr;
 
-/// The output of a file and a settings file
-type FileOutput = Result<(Vec<(Vec<Vertex>, Vec<IndexedTriangle>)>, Settings), SlicerErrors>;
+/// The raw triangles and vertices of a model
+type ModelRawData = (Vec<Vertex>, Vec<IndexedTriangle>);
 
-pub fn files_input(settings_path: Option<&str>, input: Option<Vec<String>>) -> FileOutput {
-    info!("Loading Settings");
-    let settings: Settings = {
-        if let Some(str) = settings_path {
-            load_settings(str)
-        } else {
-            Ok(Settings::default())
-        }
-    }?;
-
+pub fn load_models(
+    input: Option<Vec<String>>,
+    settings: &Settings,
+    simple_input: bool,
+) -> Result<Vec<ModelRawData>, SlicerErrors> {
     info!("Loading Input");
 
     let converted_inputs: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)> = input
         .ok_or(SlicerErrors::NoInputProvided)?
         .into_iter()
-        .try_fold(Vec::new(), |mut vec, value| {
-            let model_path = Path::new(&value);
+        .try_fold(vec![], |mut vec, value| {
+            let object: InputObject = if simple_input {
+                InputObject::Auto(value.clone())
+            } else {
+                deser_hjson::from_str(&value).map_err(|_| SlicerErrors::InputMisformat)?
+            };
+
+            let model_path = Path::new(object.get_model_path());
 
             debug!("Using input file: {:?}", model_path);
 
@@ -108,31 +111,37 @@ pub fn files_input(settings_path: Option<&str>, input: Option<Vec<String>>) -> F
 
             Ok(vec)
         })?;
-    Ok((converted_inputs, settings))
+    Ok(converted_inputs)
 }
 
-fn load_settings(filepath: &str) -> Result<Settings, SlicerErrors> {
-    let settings_data =
+pub fn load_settings_json(filepath: &str) -> Result<String, SlicerErrors> {
+    Ok(
         std::fs::read_to_string(filepath).map_err(|_| SlicerErrors::SettingsFileNotFound {
             filepath: filepath.to_string(),
-        })?;
+        })?,
+    )
+}
+
+pub fn load_settings(
+    filepath: Option<&str>,
+    settings_data: &str,
+) -> Result<Settings, SlicerErrors> {
     let partial_settings: PartialSettingsFile =
         deser_hjson::from_str(&settings_data).map_err(|_| SlicerErrors::SettingsFileMisformat {
-            filepath: filepath.to_string(),
+            filepath: filepath.unwrap_or("Command Line Argument").to_string(),
         })?;
     let current_path = std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
-    let mut path = PathBuf::from_str(filepath).map_err(|_| SlicerErrors::SettingsFileNotFound {
-        filepath: filepath.to_string(),
-    })?;
+    let path = if let Some(fp) = filepath {
+        let mut path = PathBuf::from_str(&fp).map_err(|_| SlicerErrors::SettingsFileNotFound {
+            filepath: fp.to_string(),
+        })?;
+        path.pop();
+        path
+    } else {
+        current_path
+    };
 
-    path.pop();
-
-    std::env::set_current_dir(&path).expect("Path checked before");
-
-    let settings = partial_settings.get_settings()?;
-
-    // reset path
-    std::env::set_current_dir(current_path).expect("Path checked before");
+    let settings = partial_settings.get_settings(path)?;
 
     Ok(settings)
 }

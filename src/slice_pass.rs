@@ -1,24 +1,25 @@
 use crate::plotter::lightning_infill::lightning_infill;
 use crate::plotter::support::Supporter;
 use crate::plotter::Plotter;
-use crate::utils::display_state_update;
+use crate::utils::{state_update, StateContext};
 use crate::{Object, PolygonOperations, Settings, Slice};
 use geo::prelude::*;
 use geo::MultiPolygon;
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::types::PartialInfillTypes;
+use itertools::Itertools;
 use rayon::prelude::*;
 
 pub trait ObjectPass {
-    fn pass(objects: &mut Vec<Object>, settings: &Settings, send_messages: bool);
+    fn pass(objects: &mut Vec<Object>, settings: &Settings, state_context: &mut StateContext);
 }
 
 pub struct BrimPass;
 
 impl ObjectPass for BrimPass {
-    fn pass(objects: &mut Vec<Object>, settings: &Settings, send_messages: bool) {
+    fn pass(objects: &mut Vec<Object>, settings: &Settings, state_context: &mut StateContext) {
         if let Some(width) = &settings.brim_width {
-            display_state_update("Generating Moves: Brim", send_messages);
+            state_update("Generating Moves: Brim", state_context);
             // Add to first object
 
             let first_layer_multipolygon: MultiPolygon<f64> = MultiPolygon(
@@ -51,9 +52,9 @@ impl ObjectPass for BrimPass {
 pub struct SupportTowerPass;
 
 impl ObjectPass for SupportTowerPass {
-    fn pass(objects: &mut Vec<Object>, settings: &Settings, send_messages: bool) {
+    fn pass(objects: &mut Vec<Object>, settings: &Settings, state_context: &mut StateContext) {
         if let Some(support) = &settings.support {
-            display_state_update("Generating Support Towers", send_messages);
+            state_update("Generating Support Towers", state_context);
             // Add to first object
 
             objects.par_iter_mut().for_each(|obj| {
@@ -73,10 +74,10 @@ impl ObjectPass for SupportTowerPass {
 pub struct SkirtPass;
 
 impl ObjectPass for SkirtPass {
-    fn pass(objects: &mut Vec<Object>, settings: &Settings, send_messages: bool) {
+    fn pass(objects: &mut Vec<Object>, settings: &Settings, state_context: &mut StateContext) {
         // Handle Perimeters
         if let Some(skirt) = &settings.skirt {
-            display_state_update("Generating Moves: Skirt", send_messages);
+            state_update("Generating Moves: Skirt", state_context);
             let convex_hull = objects
                 .iter()
                 .flat_map(|object| {
@@ -105,7 +106,7 @@ pub trait SlicePass {
     fn pass(
         slices: &mut Vec<Slice>,
         settings: &Settings,
-        send_message: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors>;
 }
 
@@ -115,9 +116,9 @@ impl SlicePass for ShrinkPass {
     fn pass(
         slices: &mut Vec<Slice>,
         _settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Shrink Layers", send_messages);
+        state_update("Generating Moves: Shrink Layers", state_context);
         slices.par_iter_mut().for_each(|slice| {
             slice.shrink_layer();
         });
@@ -131,9 +132,9 @@ impl SlicePass for PerimeterPass {
     fn pass(
         slices: &mut Vec<Slice>,
         settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Perimeters", send_messages);
+        state_update("Generating Moves: Perimeters", state_context);
         slices.par_iter_mut().for_each(|slice| {
             slice.slice_perimeters_into_chains(settings.number_of_perimeters as usize);
         });
@@ -147,14 +148,18 @@ impl SlicePass for BridgingPass {
     fn pass(
         slices: &mut Vec<Slice>,
         _settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Bridging", send_messages);
-        (1..slices.len()).for_each(|q| {
-            let below = slices[q - 1].main_polygon.clone();
+        state_update("Generating Moves: Bridging", state_context);
 
-            slices[q].fill_solid_bridge_area(&below);
-        });
+        let mut slice = slices.as_mut_slice();
+
+        for _ in 1..slice.len() {
+            let (first, second) = slice.split_at_mut(1);
+            second[0].fill_solid_bridge_area(&first[0].main_polygon);
+            slice = second;
+        }
+
         Ok(())
     }
 }
@@ -164,14 +169,18 @@ impl SlicePass for TopLayerPass {
     fn pass(
         slices: &mut Vec<Slice>,
         _settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Top Layer", send_messages);
-        (0..slices.len() - 1).for_each(|q| {
-            let above = slices[q + 1].main_polygon.clone();
+        state_update("Generating Moves: Top Layer", state_context);
 
-            slices[q].fill_solid_top_layer(&above, q);
-        });
+        let mut slice = slices.as_mut_slice();
+
+        for q in 1..slice.len() {
+            let (first, second) = slice.split_at_mut(1);
+            first[0].fill_solid_top_layer(&second[0].main_polygon, q - 1);
+            slice = second;
+        }
+
         Ok(())
     }
 }
@@ -182,75 +191,82 @@ impl SlicePass for TopAndBottomLayersPass {
     fn pass(
         slices: &mut Vec<Slice>,
         settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
         let top_layers = settings.top_layers;
         let bottom_layers = settings.bottom_layers;
 
-        // Make sure at least 1 layer will not be solid
-        if slices.len() > bottom_layers + top_layers {
-            display_state_update("Generating Moves: Above and below support", send_messages);
+        state_update("Generating Moves: Above and below support", state_context);
 
-            // todo par_iter trugh slices, as this is a hot loop
-            (bottom_layers..slices.len() - top_layers).for_each(|q| {
-                let below = if bottom_layers != 0 {
-                    Some(
-                        slices[(q - bottom_layers + 1)..q].iter().fold(
-                            slices
-                                .get(q - bottom_layers)
-                                .expect("Bounds Checked above")
-                                .main_polygon
-                                .clone(),
-                            |a, b| a.intersection_with(&b.main_polygon),
-                        ),
-                    )
-                } else {
-                    None
-                };
-
-                let above = if top_layers != 0 {
-                    Some(
-                        slices[(q + 1)..=(q + top_layers)]
-                            .iter()
-                            .map(|m| m.main_polygon.clone())
-                            .fold(
+        let intersections: Vec<Option<MultiPolygon>> = slices
+            .par_iter()
+            .enumerate()
+            .map(|(q, _slice)| {
+                if (bottom_layers..slices.len() - top_layers).contains(&q) {
+                    //calculate the intersection of the bottom_layers amount of layers below
+                    let below = if bottom_layers != 0 {
+                        Some(
+                            slices[(q - bottom_layers + 1)..q].iter().fold(
                                 slices
-                                    .get(q + 1)
+                                    .get(q - bottom_layers)
                                     .expect("Bounds Checked above")
                                     .main_polygon
                                     .clone(),
-                                |a, b| a.intersection_with(&b),
+                                |a, b| a.intersection_with(&b.main_polygon),
                             ),
-                    )
+                        )
+                    } else {
+                        None
+                    };
+                    //calculate the intersection of the top_layers amount of layers above
+                    let above = if top_layers != 0 {
+                        Some(
+                            slices[(q + 1)..=(q + top_layers)]
+                                .iter()
+                                .map(|m| m.main_polygon.clone())
+                                .fold(
+                                    slices
+                                        .get(q + 1)
+                                        .expect("Bounds Checked above")
+                                        .main_polygon
+                                        .clone(),
+                                    |a, b| a.intersection_with(&b),
+                                ),
+                        )
+                    } else {
+                        None
+                    };
+
+                    //merge top and bottom if Nessicary
+                    match (above, below) {
+                        (None, None) => {
+                            //return empty multipolygon
+                            // as a None value would be filled completely
+                            Some(MultiPolygon::new(Vec::new()))
+                        }
+                        (None, Some(poly)) | (Some(poly), None) => Some(poly),
+                        (Some(polya), Some(polyb)) => Some(polya.intersection_with(&polyb)),
+                    }
                 } else {
                     None
-                };
-
-                if let Some(intersection) = match (above, below) {
-                    (None, None) => None,
-                    (None, Some(poly)) | (Some(poly), None) => Some(poly),
-                    (Some(polya), Some(polyb)) => Some(polya.intersection_with(&polyb)),
-                } {
-                    slices
-                        .get_mut(q)
-                        .expect("Bounds Checked above")
-                        .fill_solid_subtracted_area(&intersection, q);
                 }
-            });
-        }
-
-        let slice_count = slices.len();
+            })
+            .collect();
 
         slices
             .par_iter_mut()
+            .zip(intersections)
             .enumerate()
-            .filter(|(layer_num, _)| {
-                *layer_num < settings.bottom_layers
-                    || settings.top_layers + *layer_num + 1 > slice_count
-            })
-            .for_each(|(layer_num, slice)| {
-                slice.fill_remaining_area(true, layer_num);
+            .for_each(|(layer, (slice, option_poly))| {
+                if let Some(poly) = option_poly {
+                    // fill the areas the are not part of the union of above and below layers
+                    slice.fill_solid_subtracted_area(&poly, layer);
+                } else {
+                    //Completely fill all areas at top and bottom
+                    slice.fill_remaining_area(true, layer);
+                }
             });
+
         Ok(())
     }
 }
@@ -261,7 +277,7 @@ impl SlicePass for SupportPass {
     fn pass(
         slices: &mut Vec<Slice>,
         settings: &Settings,
-        _send_messages: bool,
+        _state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
         if let Some(support) = &settings.support {
             for slice in slices.iter_mut() {
@@ -278,9 +294,9 @@ impl SlicePass for FillAreaPass {
     fn pass(
         slices: &mut Vec<Slice>,
         _settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Fill Areas", send_messages);
+        state_update("Generating Moves: Fill Areas", state_context);
 
         // Fill all remaining areas
         slices
@@ -298,10 +314,10 @@ impl SlicePass for LightningFillPass {
     fn pass(
         slices: &mut Vec<Slice>,
         settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
         if settings.partial_infill_type == PartialInfillTypes::Lightning {
-            display_state_update("Generating Moves: Lightning Infill", send_messages);
+            state_update("Generating Moves: Lightning Infill", state_context);
 
             lightning_infill(slices);
         }
@@ -315,9 +331,9 @@ impl SlicePass for OrderPass {
     fn pass(
         slices: &mut Vec<Slice>,
         _settings: &Settings,
-        send_messages: bool,
+        state_context: &mut StateContext,
     ) -> Result<(), SlicerErrors> {
-        display_state_update("Generating Moves: Order Chains", send_messages);
+        state_update("Generating Moves: Order Chains", state_context);
 
         // Fill all remaining areas
         slices.par_iter_mut().for_each(|slice| {

@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 
 mod settings;
 
-#[proc_macro_derive(Settings, attributes(Optional, Combine, Recursive, AllowDefault))]
+#[proc_macro_derive(Settings, attributes(Optional, Combine, Recursive, AllowDefault, CustomPrint))]
 pub fn derive_macro_builder(input: TokenStream) -> TokenStream {
     settings::derive_proc_macro_impl(input)
 }

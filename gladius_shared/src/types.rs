@@ -12,6 +12,7 @@ use nalgebra::Point3;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt::{write, Display};
 
 /// A single slice of an object containing it's current plotting status.
 pub struct Slice {
@@ -148,6 +149,15 @@ pub enum SolidInfillTypes {
     /// Back and forth lines to fill polygons, rotating custom degrees each layer
     RectilinearCustom(f64),
 }
+impl Display for SolidInfillTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SolidInfillTypes::Rectilinear => write!(f, "Rectilinear")?,
+            SolidInfillTypes::RectilinearCustom(a) => write!(f, "Rectilinear({})", a)?,
+        }
+        Ok(())
+    }
+}
 
 /// Types of partial infill
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
@@ -169,6 +179,19 @@ pub enum PartialInfillTypes {
     Lightning,
 }
 
+impl Display for PartialInfillTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PartialInfillTypes::Linear => write!(f, "Linear")?,
+            PartialInfillTypes::Rectilinear => write!(f, "Rectilinear")?,
+            PartialInfillTypes::Triangle => write!(f, "Triangle")?,
+            PartialInfillTypes::Cubic => write!(f, "Cubic")?,
+            PartialInfillTypes::Lightning => write!(f, "Lightning")?,
+        }
+        Ok(())
+    }
+}
+
 /// A single 3D vertex
 #[derive(Default, Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename = "vertex")]
@@ -186,11 +209,18 @@ pub struct Vertex {
 impl Vertex {
     /// mul with transform in place
     pub fn mul_transform(&mut self, transform: &Transform) {
-        self.x = transform.0[0][0] * self.x + transform.0[0][1] * self.y + transform.0[0][2] * self.z + transform.0[0][3];
-
-        self.y = transform.0[1][0] * self.x + transform.0[1][1] * self.y + transform.0[1][2] * self.z + transform.0[1][3];
-
-        self.z = transform.0[2][0] * self.x + transform.0[2][1] * self.y + transform.0[2][2] * self.z + transform.0[2][3];
+        self.x = transform.0[0][0] * self.x
+            + transform.0[0][1] * self.y
+            + transform.0[0][2] * self.z
+            + transform.0[0][3];
+        self.y = transform.0[1][0] * self.x
+            + transform.0[1][1] * self.y
+            + transform.0[1][2] * self.z
+            + transform.0[1][3];
+        self.z = transform.0[2][0] * self.x
+            + transform.0[2][1] * self.y
+            + transform.0[2][2] * self.z
+            + transform.0[2][3];
     }
 }
 

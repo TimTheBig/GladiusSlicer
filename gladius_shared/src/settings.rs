@@ -1,15 +1,22 @@
 #![deny(missing_docs)]
 
+use std::fmt::Display;
+use std::path::PathBuf;
+
 use crate::error::SlicerErrors;
 use crate::types::{MoveType, PartialInfillTypes, SolidInfillTypes};
 use crate::warning::SlicerWarnings;
 // for exclude area setting
-use geo::MultiPolygon;
 use gladius_proc_macros::Settings;
 #[cfg(feature = "json_schema_gen")]
 /// json schema gen
 use schemars::{schema_for, JsonSchema};
+use geo::{Contains, LinesIter, MultiPolygon};
+use geo_validity_check::Valid;
+use log::{info, trace};
+use nalgebra::Point2;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 macro_rules! setting_less_than_or_equal_to_zero {
     ($settings:ident,$setting:ident) => {{
@@ -89,10 +96,12 @@ pub struct Settings {
 
     /// The skirt settings, if None no skirt will be generated
     #[Optional]
+    #[Recursive(PartialSkirtSettings)]
     pub skirt: Option<SkirtSettings>,
 
     /// The support settings, if None no support will be generated
     #[Optional]
+    #[Recursive(PartialSupportSettings)]
     pub support: Option<SupportSettings>,
 
     /// Diameter of the nozzle in mm
@@ -108,6 +117,7 @@ pub struct Settings {
     pub retract_speed: f64,
 
     #[Optional]
+    #[Recursive(PartialRetractionWipeSettings)]
     /// Retraction Wipe
     pub retraction_wipe: Option<RetractionWipeSettings>,
 
@@ -164,18 +174,23 @@ pub struct Settings {
     pub partial_infill_type: PartialInfillTypes,
 
     /// The instructions to prepend to the exported instructions
+    #[CustomPrint]
     pub starting_instructions: String,
 
     /// The instructions to append to the end of the exported instructions
+    #[CustomPrint]
     pub ending_instructions: String,
 
     /// The instructions to append before layer changes
+    #[CustomPrint]
     pub before_layer_change_instructions: String,
 
     /// The instructions to append after layer changes
+    #[CustomPrint]
     pub after_layer_change_instructions: String,
 
     /// The instructions to append between object changes
+    #[CustomPrint]
     pub object_change_instructions: String,
 
     /// Maximum Acceleration in x dimension
@@ -221,11 +236,13 @@ pub struct Settings {
 
     #[Combine]
     #[AllowDefault]
+    #[CustomPrint]
     /// Settings for specific layers
     pub layer_settings: Vec<(LayerRange, PartialLayerSettings)>,
 
     #[Combine]
-    #[AllowDefault]
+    #[Optional]
+    #[CustomPrint]
     /// Areas of the bed that can't have parts on it
     pub bed_exclude_areas: Option<MultiPolygon>,
 
@@ -353,17 +370,17 @@ impl Default for Settings {
                 LayerRange::SingleLayer(0),
                 PartialLayerSettings {
                     extrusion_width: None,
-                    speed: Some(MovementParameter {
-                        interior_inner_perimeter: 20.0,
-                        interior_surface_perimeter: 20.0,
-                        exterior_inner_perimeter: 20.0,
-                        solid_top_infill: 20.0,
-                        solid_infill: 20.0,
-                        infill: 20.0,
-                        travel: 5.0,
-                        bridge: 20.0,
-                        support: 20.0,
-                        exterior_surface_perimeter: 20.0,
+                    speed: Some(PartialMovementParameter {
+                        interior_inner_perimeter: Some(20.0),
+                        interior_surface_perimeter: Some(20.0),
+                        exterior_inner_perimeter: Some(20.0),
+                        solid_top_infill: Some(20.0),
+                        solid_infill: Some(20.0),
+                        infill: Some(20.0),
+                        travel: Some(5.0),
+                        bridge: Some(20.0),
+                        support: Some(20.0),
+                        exterior_surface_perimeter: Some(20.0),
                     }),
                     layer_height: Some(0.3),
                     bed_temp: Some(60.0),
@@ -407,13 +424,30 @@ impl Settings {
         LayerSettings {
             layer_height: changes.layer_height.unwrap_or(self.layer_height),
             layer_shrink_amount: changes.layer_shrink_amount.or(self.layer_shrink_amount),
-            speed: changes.speed.unwrap_or_else(|| self.speed.clone()),
+            speed: changes
+                .speed
+                .map(|a| {
+                    MovementParameter::try_from(inline_combine(a, self.speed.clone().into()))
+                        .expect("self is geneteed to be complete")
+                })
+                .unwrap_or(self.speed.clone()),
             acceleration: changes
                 .acceleration
-                .unwrap_or_else(|| self.acceleration.clone()),
+                .map(|a| {
+                    MovementParameter::try_from(inline_combine(a, self.acceleration.clone().into()))
+                        .expect("self is geneteed to be complete")
+                })
+                .unwrap_or(self.acceleration.clone()),
             extrusion_width: changes
                 .extrusion_width
-                .unwrap_or_else(|| self.extrusion_width.clone()),
+                .map(|a| {
+                    MovementParameter::try_from(inline_combine(
+                        a,
+                        self.extrusion_width.clone().into(),
+                    ))
+                    .expect("self is geneteed to be complete")
+                })
+                .unwrap_or(self.extrusion_width.clone()),
             solid_infill_type: changes
                 .solid_infill_type
                 .unwrap_or(self.solid_infill_type.clone()),
@@ -469,6 +503,16 @@ impl Settings {
         setting_less_than_zero!(self, minimum_feedrate_travel);
         setting_less_than_zero!(self, minimum_feedrate_print);
         setting_less_than_zero!(self, minimum_retract_distance);
+
+        if let Some(exclude_area) = self.bed_exclude_areas.as_ref() {
+            //If it fails its likely failing due to the polygon not being complete
+            //The first and last points must be the same to be complete
+            if let Some(reason) = exclude_area.explain_invalidity() {
+                return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(
+                    format!("{}", reason),
+                ));
+            }
+        }
 
         if self.layer_height < self.nozzle_diameter * 0.2 {
             return SettingsValidationResult::Warning(SlicerWarnings::LayerSizeTooLow {
@@ -556,8 +600,12 @@ impl Settings {
                 }
             }
 
-            let r = if let Some(extrusion_width) = &pls.extrusion_width {
-                check_extrusions(extrusion_width, self.nozzle_diameter)
+            let r = if let Some(extrusion_width) = pls.extrusion_width.clone() {
+                let combined_extrustion: MovementParameter = MovementParameter::try_from(
+                    inline_combine(extrusion_width, self.extrusion_width.clone().into()),
+                )
+                .expect("self is geneteed to be complete");
+                check_extrusions(&combined_extrustion, self.nozzle_diameter)
             } else {
                 SettingsValidationResult::NoIssue
             };
@@ -566,10 +614,27 @@ impl Settings {
                 SettingsValidationResult::NoIssue => {}
                 _ => return r,
             }
+            let combined_acceleration: MovementParameter = pls
+                .acceleration
+                .clone()
+                .map(|a| {
+                    MovementParameter::try_from(inline_combine(a, self.acceleration.clone().into()))
+                        .expect("self is geneteed to be complete")
+                })
+                .unwrap_or(self.acceleration.clone());
+
+            let combined_speed: MovementParameter = pls
+                .speed
+                .clone()
+                .map(|a| {
+                    MovementParameter::try_from(inline_combine(a, self.speed.clone().into()))
+                        .expect("self is geneteed to be complete")
+                })
+                .unwrap_or(self.speed.clone());
 
             let r = check_accelerations(
-                pls.acceleration.as_ref().unwrap_or(&self.acceleration),
-                pls.speed.as_ref().unwrap_or(&self.speed),
+                &combined_acceleration,
+                &combined_speed,
                 self.print_x.min(self.print_y),
             );
             match r {
@@ -604,12 +669,15 @@ pub struct LayerSettings {
     pub layer_shrink_amount: Option<f64>,
 
     /// The speeds used for movement
+    #[Recursive(PartialMovementParameter)]
     pub speed: MovementParameter,
 
     /// The acceleration for movement
+    #[Recursive(PartialMovementParameter)]
     pub acceleration: MovementParameter,
 
     /// The extrusion width of the layers
+    #[Recursive(PartialMovementParameter)]
     pub extrusion_width: MovementParameter,
 
     /// Solid Infill type
@@ -634,6 +702,7 @@ pub struct LayerSettings {
     pub extruder_temp: f64,
 
     #[Optional]
+    #[Recursive(PartialRetractionWipeSettings)]
     /// Retraction Wipe
     pub retraction_wipe: Option<RetractionWipeSettings>,
 
@@ -756,7 +825,7 @@ impl Default for FanSettings {
 
 /// Support settings
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings,Serialize, Deserialize, Debug, Clone)]
 pub struct SupportSettings {
     /// Angle to start production supports in degrees
     pub max_overhang_angle: f64,
@@ -767,7 +836,7 @@ pub struct SupportSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings,Serialize, Deserialize, Debug, Clone)]
 pub struct SkirtSettings {
     /// the number of layer to generate the skirt
     pub layers: u32,
@@ -778,7 +847,7 @@ pub struct SkirtSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Settings,Serialize, Deserialize, Debug, Clone)]
 pub struct RetractionWipeSettings {
     /// The speed the retract wipe move
     pub speed: f64,
@@ -797,15 +866,27 @@ pub struct PartialSettingsFile {
     /// Other files to load
     pub other_files: Option<Vec<String>>,
 
+    ///The incompete settings that this files comtains that will be prioritized over the contents of the other files
     #[serde(flatten)]
-    partial_settings: PartialSettings,
+    pub partial_settings: PartialSettings,
 }
 
 impl PartialSettingsFile {
     /// Convert a partial settings file into a complete settings file
     /// returns an error if a settings is not present in this or any sub file
-    pub fn get_settings(mut self) -> Result<Settings, SlicerErrors> {
+    pub fn get_settings(mut self, path: PathBuf) -> Result<Settings, SlicerErrors> {
+        let current_path =
+            std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
+
+        //set the directory of the current directory
+        std::env::set_current_dir(&path).expect("Path checked before");
+        trace!("Setting path to {:?}", path);
+
         self.combine_with_other_files()?;
+
+        // reset path
+        trace!("Setting path to {:?}", current_path);
+        std::env::set_current_dir(current_path).expect("Path checked before");
 
         Settings::try_from(self.partial_settings).map_err(|err| {
             SlicerErrors::SettingsFileMissingSettings {
@@ -832,7 +913,26 @@ impl PartialSettingsFile {
                     filepath: file.to_string(),
                 })?;
 
+            let mut path =
+                PathBuf::from_str(file).map_err(|_| SlicerErrors::SettingsFileNotFound {
+                    filepath: file.to_string(),
+                })?;
+            trace!("Setting path to {:?}", path);
+            path.pop();
+
+            let current_path =
+                std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
+            //set the directory of the current directory
+            if path.exists() {
+                trace!("Setting path to {:?}", path);
+                std::env::set_current_dir(&path).expect("Path checked before");
+            }
+
             ps.combine_with_other_files()?;
+
+            // reset path
+            trace!("Setting path to {:?}", current_path);
+            std::env::set_current_dir(current_path).expect("Path checked before");
 
             self.partial_settings.combine(ps.partial_settings);
         }
@@ -865,6 +965,21 @@ pub enum LayerRange {
         /// The end height
         end: f64,
     },
+}
+
+impl Display for LayerRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LayerRange::SingleLayer(layer) => write!(f, "SingleLayer({})", layer)?,
+            LayerRange::LayerCountRange { start, end } => {
+                write!(f, "LayerCountRange({}<=layer<={})", start, end)?
+            }
+            LayerRange::HeightRange { start, end } => {
+                write!(f, "HeightRange({}<=height<={})", start, end)?
+            }
+        }
+        Ok(())
+    }
 }
 
 fn check_extrusions(
@@ -1100,6 +1215,12 @@ trait Combine {
     fn combine(&mut self, other: Self);
 }
 
+///Controls how to convert settings into a list of strings
+pub trait SettingsPrint {
+    ///Controls how to convert settings into a list of strings
+    fn to_strings(&self) -> Vec<String>;
+}
+
 impl<T> Combine for Vec<T> {
     fn combine(&mut self, mut other: Self) {
         self.append(&mut other);
@@ -1120,6 +1241,72 @@ impl Combine for MultiPolygon {
     }
 }
 
+fn inline_combine<T>(mut a: T, b: T) -> T
+where
+    T: Combine,
+{
+    a.combine(b);
+    a
+}
+
+impl SettingsPrint for MultiPolygon {
+    fn to_strings(&self) -> Vec<String> {
+        vec![format!("{:?}", self)]
+    }
+}
+
+impl SettingsPrint for String {
+    fn to_strings(&self) -> Vec<String> {
+        vec![self.replace('\n', "\\n").replace('\r', "")]
+    }
+}
+
+impl<T> SettingsPrint for Vec<T>
+where
+    T: SettingsPrint,
+{
+    fn to_strings(&self) -> Vec<String> {
+        let mut settings = vec![];
+        for s in self {
+            settings.append(&mut s.to_strings());
+        }
+        settings
+    }
+}
+
+impl<T> SettingsPrint for Option<T>
+where
+    T: SettingsPrint,
+{
+    fn to_strings(&self) -> Vec<String> {
+        self.iter().flat_map(|x| x.to_strings()).collect()
+    }
+}
+
+impl<N, S> SettingsPrint for (N, S)
+where
+    N: Display,
+    S: SettingsPrint,
+{
+    fn to_strings(&self) -> Vec<String> {
+        let mut settings = vec![];
+        let (n, s) = self;
+
+        let mut line = format!("{} : [", n);
+        for s in s.to_strings() {
+            line += &format!("{},", s);
+        }
+        //remove last comma
+        line.pop();
+        line += "]";
+
+        settings.push(line);
+
+        settings
+    }
+}
+
 /// Error for Partial Conversion to Full Type
 /// String contains missing path
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PartialConvertError(String);

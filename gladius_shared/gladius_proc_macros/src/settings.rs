@@ -19,6 +19,8 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         let try_from_internals = transform_fields_into_try_from_internals(&data_struct);
         let from_internals = transform_fields_into_from_internals(&data_struct);
         let names_and_types = transform_fields_into_names_and_types(&data_struct);
+        let to_strings_internals = transform_fields_to_strings_internals(&data_struct);
+        let partial_to_strings_internals = transform_fields_partial_to_strings_internals(&data_struct);
 
       quote! {
 
@@ -59,6 +61,32 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         impl  #struct_name_ident{
             fn get_names_and_types() -> Vec<(String,String)> {
                 #names_and_types
+            }
+        }
+
+        impl SettingsPrint for #struct_name_ident{
+            fn to_strings(&self) -> Vec<String>{
+                // returns vec![ 
+                // "setting = value"
+                // "setting.subsetting = value "
+                // ]
+
+                let mut settings_vec = vec![];
+                #to_strings_internals
+                settings_vec
+            }
+        }
+
+        impl SettingsPrint for #partial_settings_struct_name{
+            fn to_strings(&self) -> Vec<String>{
+                // returns vec![ 
+                // "setting = value"
+                // "setting.subsetting = value "
+                // ]
+
+                let mut settings_vec = vec![];
+                #partial_to_strings_internals
+                settings_vec
             }
         }
 
@@ -213,8 +241,9 @@ fn transform_fields_into_try_from_internals(data_struct: &DataStruct) -> TokenSt
                             #field_ident: value.#field_ident.unwrap_or_default(),
                         }
                     }
-                    else {
-                        quote! {#field_ident: value.#field_ident.ok_or(PartialConvertError(#field_ident_str.to_string()))?,
+                    else{
+                        quote! {
+                            #field_ident: value.#field_ident.ok_or(PartialConvertError(#field_ident_str.to_string()))?,
 
                         }
                     }
@@ -292,6 +321,144 @@ fn transform_fields_into_names_and_types(data_struct: &DataStruct) -> TokenStrea
                     #(#props_ts_iter)*
                 ]
 
+
+            }
+        }
+        _ => quote! {},
+    }
+}
+
+fn transform_fields_to_strings_internals(data_struct: &DataStruct) -> proc_macro2::TokenStream {
+    match data_struct.fields {
+        syn::Fields::Named(ref fields) => {
+            let props_ts_iter = fields.named.iter().map(|named_field| {
+                let field_ident = named_field.ident.as_ref().unwrap();
+
+                let field_ident_str = named_field.ident.as_ref().unwrap().to_string();
+
+                let mut optional = false;
+                let mut custom_print = false;
+                let mut recursive_type_opt = None;
+
+                for attribute in &named_field.attrs {
+                    if attribute.path().is_ident("Optional") {
+                        optional = true;
+                    }
+                    if attribute.path().is_ident("Recursive") {
+                        recursive_type_opt = Some(attribute.parse_args::<syn::Type>().unwrap());
+                    }
+
+                    if attribute.path().is_ident("CustomPrint") {
+                        custom_print = true;
+                    }
+                }
+
+                if custom_print {
+                    quote! {
+                        settings_vec.extend(
+                            self.#field_ident
+                                .to_strings()
+                                .iter()
+                                .map(|x| format!("{} = {}", #field_ident_str, x))
+                        );
+                    }
+                } else if optional {
+                    if recursive_type_opt.is_some() {
+                        quote! {
+                            if let Some(set) = self.#field_ident.as_ref(){
+                                for s in set.to_strings(){
+                                    settings_vec.push(format!("{}.{}",#field_ident_str, s));
+                                }
+                            }
+                        }
+                    } else {
+                        quote! {
+                            if let Some(set) = self.#field_ident{
+                                settings_vec.push(format!("{} = {}", #field_ident_str, set));
+                            }
+                        }
+                    }
+                } else if recursive_type_opt.is_some() {
+                    quote! {
+                        for s in self.#field_ident.to_strings(){
+                            settings_vec.push(format!("{}.{}",#field_ident_str, s));
+                        }
+                    }
+                } else {
+                    quote! {
+                        settings_vec.push(format!("{} = {}", #field_ident_str, self.#field_ident));
+                    }
+                }
+            });
+            // Unwrap iterator into a [proc_macro2::TokenStream].
+            quote! {
+
+                 #(#props_ts_iter)*
+
+            }
+        }
+        _ => quote! {},
+    }
+}
+
+fn transform_fields_partial_to_strings_internals(
+    data_struct: &DataStruct,
+) -> proc_macro2::TokenStream {
+    match data_struct.fields {
+        syn::Fields::Named(ref fields) => {
+            let props_ts_iter = fields.named.iter().map(|named_field| {
+                let field_ident = named_field.ident.as_ref().unwrap();
+
+                let field_ident_str = named_field.ident.as_ref().unwrap().to_string();
+
+                let mut optional = false;
+                let mut custom_print = false;
+                let mut recursive_type_opt = None;
+
+                for attribute in &named_field.attrs {
+                    if attribute.path().is_ident("Optional") {
+                        optional = true;
+                    }
+                    if attribute.path().is_ident("Recursive") {
+                        recursive_type_opt = Some(attribute.parse_args::<syn::Type>().unwrap());
+                    }
+
+                    if attribute.path().is_ident("CustomPrint") {
+                        custom_print = true;
+                    }
+                }
+
+                if custom_print {
+                    quote! {
+                        if let Some(set) = self.#field_ident.as_ref(){
+                                settings_vec.extend(
+                                    set
+                                        .to_strings()
+                                        .iter()
+                                        .map(|x| format!("{} = {}", #field_ident_str, x))
+                                );
+                        }
+                    }
+                } else if recursive_type_opt.is_some() {
+                    quote! {
+                        if let Some(set) = self.#field_ident.as_ref(){
+                            for s in set.to_strings(){
+                                settings_vec.push(format!("{}.{}",#field_ident_str, s));
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        if let Some(set) = self.#field_ident.as_ref(){
+                            settings_vec.push(format!("{} = {}", #field_ident_str, set));
+                        }
+                    }
+                }
+            });
+            // Unwrap iterator into a [proc_macro2::TokenStream].
+            quote! {
+
+                 #(#props_ts_iter)*
 
             }
         }

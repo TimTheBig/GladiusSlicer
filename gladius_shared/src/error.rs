@@ -111,6 +111,9 @@ pub enum SlicerErrors {
 
     /// If a model is in an area of the bed that is rserved, contains the area that it intersected
     InExcludeArea(MultiPolygon),
+
+    /// Invalid bed exclusion polygon
+    InvalidBedExcludeArea(String),
 }
 
 impl SlicerErrors {
@@ -187,7 +190,10 @@ impl SlicerErrors {
                 (0x1015,format!("Prasing the Macros Failed with error: {}",sub_error))
             }
             SlicerErrors::InExcludeArea(area) => {
-                (0x1015, format!("A model intersected with this excluded area: {:?}", area))
+                (0x1016, format!("A model intersected with this excluded area: {:?}", area))
+            },
+            SlicerErrors::InvalidBedExcludeArea(reason) => {
+                (0x1017, format!("The settings file contains an invalid bed exclusion area: {:?}", reason))
             },
         }
     }
