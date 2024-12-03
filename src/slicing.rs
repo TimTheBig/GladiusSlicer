@@ -14,7 +14,7 @@ pub fn slice<V>(
     plane_normal: &Vertex,
 ) -> Result<Vec<Object>, SlicerErrors>
 where
-    V: Send + Sync + Clone + TowerVertex,
+    V: Sync + TowerVertex,
 {
     towers
         .into_par_iter()

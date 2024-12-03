@@ -1,14 +1,6 @@
 #![deny(missing_docs)]
 
-use crate::utils::lerp;
-use crate::SlicerErrors;
-use binary_heap_plus::{BinaryHeap, MinComparator};
-use gladius_shared::types::{IndexedTriangle, Vertex};
-use rayon::prelude::*;
-use std::fmt::{Display, Formatter};
-use std::hash::{Hash, Hasher};
-
-/*
+/*!
     Rough algoritim
 
     build tower
@@ -16,6 +8,14 @@ use std::hash::{Hash, Hasher};
 
     progress up tower
 */
+
+use crate::utils::lerp;
+use crate::SlicerErrors;
+use binary_heap_plus::{BinaryHeap, MinComparator};
+use gladius_shared::types::{IndexedTriangle, Vertex};
+use rayon::prelude::*;
+use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 /// Calculate the **vertex**, the Line from `v_start` to `v_end` where
 /// it intersects with the plane z
@@ -54,7 +54,7 @@ pub struct TriangleTower<V: TowerVertex> {
     tower_vertices: BinaryHeap<TowerVertexEvent<V>, MinComparator>,
 }
 
-impl<V> TriangleTower<V> where V: Ord + Clone + TowerVertex {
+impl<V> TriangleTower<V> where V: TowerVertex {
     /// Create a `TriangleTower` from **vertices** as leading or trailing edges and **triangles**
     /// The normal specifys the slicing plane's normal
     pub fn from_triangles_and_vertices(
@@ -146,18 +146,12 @@ struct TowerVertexEvent<V: TowerVertex> {
     pub start_vert: V,
 }
 
-impl<V> PartialOrd for TowerVertexEvent<V>
-where
-    V: TowerVertex + Ord,
-{
+impl<V: TowerVertex> PartialOrd for TowerVertexEvent<V> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<V> Ord for TowerVertexEvent<V>
-where
-    V: TowerVertex + Ord,
-{
+impl<V: TowerVertex> Ord for TowerVertexEvent<V> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.start_vert
             .partial_cmp(&other.start_vert)
@@ -165,7 +159,7 @@ where
     }
 }
 
-impl<V> Eq for TowerVertexEvent<V> where V: TowerVertex + Eq {}
+impl<V: TowerVertex> Eq for TowerVertexEvent<V> {}
 
 impl<V> PartialEq for TowerVertexEvent<V>
 where
@@ -448,7 +442,7 @@ pub fn project_vertex_onto_plane<V: TowerVertex>(vertex: &V, plane_normal: &Vert
     vertex.dot(plane_normal)
 }
 
-impl<'s, V> TriangleTowerIterator<'s, V> where V: Clone + Ord + TowerVertex {
+impl<'s, V> TriangleTowerIterator<'s, V> where V: TowerVertex {
     pub fn new(tower: TriangleTower<V>, plane_normal: &'s Vertex) -> Self {
         let plane_height = tower.get_height_of_next_vertex();
         Self {
@@ -530,11 +524,10 @@ impl<'s, V> TriangleTowerIterator<'s, V> where V: Clone + Ord + TowerVertex {
 }
 
 /// Creates a `TriangleTower` for each model in parallel
-pub fn create_towers<V: Send>(
+pub fn create_towers<V: TowerVertex>(
     models: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)>,
     plane_normal: &Vertex,
-) -> Result<Vec<TriangleTower<V>>, SlicerErrors>
-where V: Ord + Clone + TowerVertex {
+) -> Result<Vec<TriangleTower<V>>, SlicerErrors> {
     models
         .into_par_iter()
         .map(|(vertices, triangles)| {
@@ -543,7 +536,8 @@ where V: Ord + Clone + TowerVertex {
         .collect()
 }
 
-pub trait TowerVertex: Eq + Ord {
+/// Used to allow vertices with custom ord impls'
+pub trait TowerVertex: Clone + Eq + Ord + Send {
     /// Convert from vertex to this type
     fn from_vertex(vertex: Vertex) -> Self;
 
@@ -559,7 +553,7 @@ pub trait TowerVertex: Eq + Ord {
     /// Gets the vertex at the specified height between start and end
     fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self;
 
-    /// Get the dot product of two TowerVerts
+    /// Get the dot product of two tower vertices
     #[inline]
     fn dot<V: TowerVertex>(&self, other: &V) -> f64 {
         self.get_slice_x() * other.get_slice_x()
@@ -573,7 +567,7 @@ pub trait TowerVertex: Eq + Ord {
 impl TowerVertex for Vertex {
     #[inline]
     fn from_vertex(vertex: Vertex) -> Self {
-        // No type convertion needed
+        // No type conversion needed
         vertex
     }
 

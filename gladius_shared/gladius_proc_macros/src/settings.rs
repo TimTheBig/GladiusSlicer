@@ -411,14 +411,10 @@ fn transform_fields_partial_to_strings_internals(
 
                 let field_ident_str = named_field.ident.as_ref().unwrap().to_string();
 
-                let mut optional = false;
                 let mut custom_print = false;
                 let mut recursive_type_opt = None;
 
                 for attribute in &named_field.attrs {
-                    if attribute.path().is_ident("Optional") {
-                        optional = true;
-                    }
                     if attribute.path().is_ident("Recursive") {
                         recursive_type_opt = Some(attribute.parse_args::<syn::Type>().unwrap());
                     }

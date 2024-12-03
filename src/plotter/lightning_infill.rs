@@ -6,7 +6,7 @@ use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use coordinate_position::CoordPos;
 use geo::line_intersection::{line_intersection, LineIntersection};
-use geo::{Distance, Euclidean, EuclideanDistance};
+use geo::{Distance, Euclidean};
 use gladius_shared::settings::LayerSettings;
 
 use rand::seq::SliceRandom;
@@ -124,7 +124,7 @@ pub fn lightning_layer(
         });
 
         for (node, _distance, closet) in points {
-            lightning_forest.add_node_to_tree(node, &closet, inset_amount);
+            lightning_forest.add_node_to_tree(node, closet, inset_amount);
         }
     }
 
@@ -382,17 +382,17 @@ impl LightningForest {
     fn add_node_to_tree(
         &mut self,
         node: LightningNode,
-        closest_point_on_polygon: &Coord<f64>,
+        closest_point_on_polygon: Coord<f64>,
         min_distance: f64,
     ) {
-        let poly_dist = node.location.euclidean_distance(closest_point_on_polygon);
+        let poly_dist = Euclidean::distance(node.location, closest_point_on_polygon);
 
         if poly_dist < min_distance {
             // connect to polygon if below min distance
             // handle minor wall movements
             self.trees.push(LightningNode {
                 children: vec![node],
-                location: *closest_point_on_polygon,
+                location: closest_point_on_polygon,
             });
 
             return;
@@ -417,7 +417,7 @@ impl LightningForest {
 
         self.trees.push(LightningNode {
             children: vec![node],
-            location: *closest_point_on_polygon,
+            location: closest_point_on_polygon,
         });
     }
 
@@ -482,7 +482,7 @@ fn get_closest_intersection_point_on_polygon(
                 LineIntersection::Collinear { intersection } => intersection.end,
             })
         })
-        .map(|coord| (coord, coord.euclidean_distance(&line.start)))
+        .map(|coord| (coord, Euclidean::distance(coord, line.start)))
         .min_by(|a, b| {
             a.1.partial_cmp(&b.1)
                 .expect("Points Should not contain NAN")

@@ -1,4 +1,4 @@
-Triangle Tower Slicing Algoritm 
+Triangle Tower Slicing Algorithm 
     Given set of triangles T and Vertices V
 
     Triangles should be made CCW
@@ -9,7 +9,7 @@ Triangle Tower Slicing Algoritm
     For each triangle t in T
         For each edge e with points (s -> f) in t
         if s < e
-            Add the fragement [t,e] to Tv[s]
+            Add the fragment [t,e] to Tv[s]
         else
             Add the fragment [e,t] to TV[f]
 
@@ -22,7 +22,7 @@ Triangle Tower Slicing Algoritm
     While P is not empty
         current_vertex = P.pop
         Break apart current rings at any instance of current vertex ( split_on_edge ) and store in fragments
-        Add any fragement from current vertex to fragments
+        Add any fragment from current vertex to fragments
         Join fragments (join_fragments) in fragments and store into current rings
         assert that each ring is complete ( first element matches last element)
         if P.peek.height > height + layer_height
@@ -47,11 +47,11 @@ split_on_edge algorithm
             else //e is face
                 add e to new_ring 
 
-        Append new_ring to the start of finshed_fragment[0] if it exists otherwise add new_ring to finshed_fragments  
+        Append new_ring to the start of finished_fragment[0] if it exists otherwise add new_ring to finished_fragments  
 
-        Remove any fragments from finshed_fragments that are 1 length faces //these are faces that ended there
+        Remove any fragments from finished_fragments that are 1 length faces //these are faces that ended there
 
-        return finshed_fragments
+        return finished_fragments
 
     examples
         Example 1
