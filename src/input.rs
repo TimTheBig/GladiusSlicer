@@ -3,9 +3,9 @@ use crate::{
     debug, info, IndexedTriangle, InputObject, Loader, OsStr, PartialSettingsFile, Path, STLLoader,
     Settings, SlicerErrors, ThreeMFLoader, Transform, Vertex,
 };
+use log::error;
 use std::path::PathBuf;
 use std::str::FromStr;
-use log::error;
 
 /// The raw triangles and vertices of a model
 type ModelRawData = (Vec<Vertex>, Vec<IndexedTriangle>);
@@ -20,7 +20,7 @@ pub fn load_models(
     let converted_inputs: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)> = input
         .ok_or(SlicerErrors::NoInputProvided)?
         .into_iter()
-        .try_fold(vec![], |mut vec, value| {
+        .try_fold(Vec::new(), |mut vec, value| {
             let object: InputObject = if simple_input {
                 InputObject::Auto(value.clone())
             } else {

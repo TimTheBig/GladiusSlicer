@@ -19,7 +19,9 @@ pub fn convert(
     writeln!(
         write_buf,
         ";========== date: {} ==================",
-        time::OffsetDateTime::now_utc().format(&Iso8601::DATE).expect("This is a valid format")
+        time::OffsetDateTime::now_utc()
+            .format(&Iso8601::DATE)
+            .expect("This is a valid format")
     )
     .map_err(|_| SlicerErrors::FileWriteError)?;
 

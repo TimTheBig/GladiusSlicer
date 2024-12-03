@@ -1,10 +1,10 @@
 #![deny(missing_docs)]
 
-use crate::SlicerErrors;
 use crate::utils::lerp;
+use crate::SlicerErrors;
+use binary_heap_plus::{BinaryHeap, MinComparator};
 use gladius_shared::types::{IndexedTriangle, Vertex};
 use rayon::prelude::*;
-use binary_heap_plus::{BinaryHeap, MinComparator};
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -17,7 +17,6 @@ use std::hash::{Hash, Hasher};
     progress up tower
 */
 
-
 /// Calculate the **vertex**, the Line from `v_start` to `v_end` where
 /// it intersects with the plane z
 ///
@@ -29,7 +28,12 @@ use std::hash::{Hash, Hasher};
 /// * `v_end` - Ending point of the line
 ///
 /// Calculate the intersection of a line with a plane defined by `normal` and `plane_height`
-fn plane_intersection(plane_height: f64, v_start: &Vertex, v_end: &Vertex, normal: &Vertex) -> Vertex {
+fn plane_intersection(
+    plane_height: f64,
+    v_start: &Vertex,
+    v_end: &Vertex,
+    normal: &Vertex,
+) -> Vertex {
     // project on to plane
     let start_proj = v_start.dot(normal);
     let end_proj = v_end.dot(normal);
@@ -66,36 +70,32 @@ impl<V> TriangleTower<V> where V: Ord + Clone + TowerVertex {
         let converted_vertices: Vec<V> = vertices.into_iter().map(|v| V::from_vertex(v)).collect();
 
         for (triangle_index, index_tri) in triangles.iter().enumerate() {
-            // for each edge of the triangle add a fragment to the lower of the points 
+            // for each edge of the triangle add a fragment to the lower of the points
             for i in 0..3 {
                 // if the point edge is rising then the order will be triangle then edge
                 // if the edge is falling (or degenerate) it should go edge then triangle
 
-                if  converted_vertices[index_tri.verts[i]] < converted_vertices[index_tri.verts[(i+1)%3]] {
-                    let triangle_element = TowerRingElement::Face {
-                        triangle_index
-                    };
+                if converted_vertices[index_tri.verts[i]]
+                    < converted_vertices[index_tri.verts[(i + 1) % 3]]
+                {
+                    let triangle_element = TowerRingElement::Face { triangle_index };
                     let edge_element = TowerRingElement::Edge {
                         start_index: index_tri.verts[i],
-                        end_index: index_tri.verts[(i+1)%3],
+                        end_index: index_tri.verts[(i + 1) % 3],
                     };
-    
+
                     future_tower_vert[index_tri.verts[i]].push(TowerRing {
-                        elements: vec![ triangle_element,edge_element],
+                        elements: vec![triangle_element, edge_element],
                     });
-                }
-                else {
-                    
+                } else {
                     let edge_element = TowerRingElement::Edge {
-                        start_index: index_tri.verts[(i+1)%3],
-                        end_index:index_tri.verts[i],
+                        start_index: index_tri.verts[(i + 1) % 3],
+                        end_index: index_tri.verts[i],
                     };
-    
-                    let triangle_element = TowerRingElement::Face {
-                        triangle_index
-                    };
-    
-                    future_tower_vert[index_tri.verts[(i+1)%3]].push(TowerRing {
+
+                    let triangle_element = TowerRingElement::Face { triangle_index };
+
+                    future_tower_vert[index_tri.verts[(i + 1) % 3]].push(TowerRing {
                         elements: vec![edge_element, triangle_element],
                     });
                 }
@@ -113,7 +113,10 @@ impl<V> TriangleTower<V> where V: Ord + Clone + TowerVertex {
                 TowerVertexEvent {
                     start_index: index,
                     next_ring_fragments: fragments,
-                    start_vert: converted_vertices.get(index).expect("validated above").clone(),
+                    start_vert: converted_vertices
+                        .get(index)
+                        .expect("validated above")
+                        .clone(),
                 }
             })
             .collect();
@@ -143,12 +146,18 @@ struct TowerVertexEvent<V: TowerVertex> {
     pub start_vert: V,
 }
 
-impl<V> PartialOrd for TowerVertexEvent<V>  where V: TowerVertex + Ord {
+impl<V> PartialOrd for TowerVertexEvent<V>
+where
+    V: TowerVertex + Ord,
+{
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-impl<V> Ord for TowerVertexEvent<V> where V: TowerVertex + Ord {
+impl<V> Ord for TowerVertexEvent<V>
+where
+    V: TowerVertex + Ord,
+{
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.start_vert
             .partial_cmp(&other.start_vert)
@@ -158,7 +167,10 @@ impl<V> Ord for TowerVertexEvent<V> where V: TowerVertex + Ord {
 
 impl<V> Eq for TowerVertexEvent<V> where V: TowerVertex + Eq {}
 
-impl<V> PartialEq for TowerVertexEvent<V>  where V: TowerVertex + PartialEq {
+impl<V> PartialEq for TowerVertexEvent<V>
+where
+    V: TowerVertex + PartialEq,
+{
     fn eq(&self, other: &Self) -> bool {
         self.start_vert.eq(&other.start_vert)
     }
@@ -432,7 +444,7 @@ pub struct TriangleTowerIterator<'s, F: TowerVertex> {
 /// Calculates the signed projection of a point onto the slicing plane normal.\
 /// Returning a scalar value that represents the height of the vertex in the direction of the plane’s normal.
 #[inline(always)]
-pub fn project_vertex_onto_plane(vertex: &Vertex, plane_normal: &Vertex) -> f64 {
+pub fn project_vertex_onto_plane<V: TowerVertex>(vertex: &V, plane_normal: &Vertex) -> f64 {
     vertex.dot(plane_normal)
 }
 
@@ -518,10 +530,11 @@ impl<'s, V> TriangleTowerIterator<'s, V> where V: Clone + Ord + TowerVertex {
 }
 
 /// Creates a `TriangleTower` for each model in parallel
-pub fn create_towers<V: Send> (
+pub fn create_towers<V: Send>(
     models: Vec<(Vec<Vertex>, Vec<IndexedTriangle>)>,
     plane_normal: &Vertex,
-) -> Result<Vec<TriangleTower<V>>, SlicerErrors> where V : Ord + Clone+TowerVertex {
+) -> Result<Vec<TriangleTower<V>>, SlicerErrors>
+where V: Ord + Clone + TowerVertex {
     models
         .into_par_iter()
         .map(|(vertices, triangles)| {
@@ -531,28 +544,40 @@ pub fn create_towers<V: Send> (
 }
 
 pub trait TowerVertex: Eq + Ord {
-    /// Convert from vertex to this type 
+    /// Convert from vertex to this type
     fn from_vertex(vertex: Vertex) -> Self;
 
     /// Return the height of this vertex
     fn get_height(&self) -> f64;
 
-    /// Gets the x position for slicing purposes 
+    /// Gets the x position for slicing purposes
     fn get_slice_x(&self) -> f64;
 
-    /// Gets the y position for slicing purposes 
+    /// Gets the y position for slicing purposes
     fn get_slice_y(&self) -> f64;
 
     /// Gets the vertex at the specified height between start and end
     fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self;
+
+    /// Get the dot product of two TowerVerts
+    #[inline]
+    fn dot<V: TowerVertex>(&self, other: &V) -> f64 {
+        self.get_slice_x() * other.get_slice_x()
+        +
+        self.get_slice_y() * other.get_slice_y()
+        +
+        self.get_height() * other.get_height()
+    }
 }
 
 impl TowerVertex for Vertex {
+    #[inline]
     fn from_vertex(vertex: Vertex) -> Self {
         // No type convertion needed
         vertex
     }
 
+    #[inline]
     fn get_height(&self) -> f64 {
         // height is just Z position
         self.z
@@ -562,17 +587,19 @@ impl TowerVertex for Vertex {
         // Lerps from start to end given the height
         let z_normal = (height - v_start.z) / (v_end.z - v_start.z);
         debug_assert!(z_normal <= 1.0);
-    
+
         let y = lerp(v_start.y, v_end.y, z_normal);
         let x = lerp(v_start.x, v_end.x, z_normal);
         Vertex { x, y, z: height }
     }
-    
+
+    #[inline]
     fn get_slice_x(&self) -> f64 {
         // slice just uses x position
         self.x
     }
-    
+
+    #[inline]
     fn get_slice_y(&self) -> f64 {
         // slice just uses y position
         self.y

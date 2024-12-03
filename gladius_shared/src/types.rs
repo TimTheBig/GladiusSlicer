@@ -225,12 +225,6 @@ impl Vertex {
             + transform.0[2][3];
     }
 
-    /// Get the dot product of two vectors
-    #[inline(always)]
-    pub fn dot(&self, other: &Vertex) -> f64 {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-
     /// Calculates the magnitude (length) of the vector represented by this [`Vertex`].
     #[inline(always)]
     pub fn magnitude(&self) -> f64 {
@@ -274,7 +268,6 @@ impl PartialOrd for Vertex {
         Some(self.cmp(other))
     }
 }
-
 
 impl Transform {
     /// create a new transform for translation

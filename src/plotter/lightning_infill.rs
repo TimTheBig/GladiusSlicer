@@ -261,7 +261,7 @@ impl LightningNode {
     }
 
     fn get_closest_child(&self, point: &Coord<f64>) -> f64 {
-        let min_dist = self.location.euclidean_distance(point)
+        let min_dist = Euclidean::distance(self.location, *point)
             - if !self.children.is_empty() && self.children.len() < 4 {
                 (2.0/* - self.children.len() as f64*/) * 0.45 / 2.0
             } else {

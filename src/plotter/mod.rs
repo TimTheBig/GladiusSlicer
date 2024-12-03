@@ -286,14 +286,14 @@ impl Plotter for Slice {
                     .iter()
                     .position_min_by_key(|a| {
                         OrderedFloat(
-                            ordered_chains
+                            Euclidean::distance(ordered_chains
                                 .last()
                                 .expect("Chains is tests not to be empty")
                                 .moves
                                 .last()
                                 .expect("chain should contain moves")
-                                .end
-                                .euclidean_distance(&a.start_point),
+                                .end,
+                                a.start_point),
                         )
                     })
                     .expect("Chains is tests not to be empty");
@@ -348,7 +348,7 @@ impl Plotter for Slice {
                             .iter()
                             .tuple_windows::<(_, _)>()
                             .map(|(cur_point, next_point)| {
-                                let len: f64 = cur_point.euclidean_distance(next_point);
+                                let len: f64 = Euclidean::distance(*cur_point, *next_point);
 
                                 (len, cur_point, next_point)
                             })
