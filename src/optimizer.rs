@@ -5,7 +5,7 @@ use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, RetractionType, StateChange};
 use itertools::Itertools;
 
-/// Remove `Command`s that don't acheve anything
+/// Remove [`Command`]s that don't acheve anything
 pub fn unary_optimizer(cmds: &mut Vec<Command>) {
     cmds.retain(|cmd| match cmd {
         Command::MoveTo { .. } => true,
@@ -238,11 +238,11 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
         // todo fix
         let start = match cmds[*range.start()] {
             Command::MoveAndExtrude { start, .. } => start,
-            _ => continue
+            _ => continue,
         };
         let end = match cmds[*range.end()] {
             Command::MoveAndExtrude { end, .. } => end,
-            _ => continue
+            _ => continue,
         };
 
         for i in range.by_ref() {

@@ -10,7 +10,9 @@ use std::{
 };
 
 pub struct StateContext {
+    /// Whether to use Message or StdOut
     pub display_type: DisplayType,
+    /// Start time of slicing
     start_time: SystemTime,
     last_time: SystemTime,
 }
@@ -34,11 +36,11 @@ impl StateContext {
         elapsed
     }
 
+    /// Get the time elapsed since `self.start_time`
     pub fn get_total_elapsed_time(&self) -> Duration {
-        let elapsed = SystemTime::now()
+        SystemTime::now()
             .duration_since(self.start_time)
-            .expect("Time can only go forward");
-        elapsed
+            .expect("Time can only go forward")
     }
 }
 
@@ -85,6 +87,7 @@ pub fn send_warning_message(warning: SlicerWarnings) {
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
+/// Show a state update based on the message mode
 pub fn state_update(state_message: &str, state_context: &mut StateContext) {
     match state_context.display_type {
         DisplayType::Message => {
@@ -118,7 +121,9 @@ pub fn point_lerp(a: &Coord<f64>, b: &Coord<f64>, f: f64) -> Coord<f64> {
     }
 }
 
-#[inline]
+/// ## Linear Interpolate
+/// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
+#[inline(always)]
 pub fn lerp(a: f64, b: f64, f: f64) -> f64 {
     a + f * (b - a)
 }

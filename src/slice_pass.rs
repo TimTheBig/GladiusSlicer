@@ -20,8 +20,8 @@ impl ObjectPass for BrimPass {
     fn pass(objects: &mut Vec<Object>, settings: &Settings, state_context: &mut StateContext) {
         if let Some(width) = &settings.brim_width {
             state_update("Generating Moves: Brim", state_context);
-            // Add to first object
 
+            // Add to first object
             let first_layer_multipolygon: MultiPolygon<f64> = MultiPolygon(
                 objects
                     .iter()

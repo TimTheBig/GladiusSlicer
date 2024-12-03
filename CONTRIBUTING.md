@@ -36,7 +36,6 @@ done the following things first:
 
 
 ## Open Areas of development
-* Adding MacOS support
-* Remove Bindgen / Clipper as a dependancy
+* Remove Bindgen / Clipper as a dependency
 * Adding Support Material
 * Improve documentation

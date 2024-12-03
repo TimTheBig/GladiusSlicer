@@ -12,7 +12,8 @@ use nalgebra::Point3;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::fmt::{write, Display};
+use std::fmt::Display;
+use std::ops::Sub;
 
 /// A single slice of an object containing it's current plotting status.
 pub struct Slice {
@@ -188,11 +189,12 @@ impl Display for PartialInfillTypes {
             PartialInfillTypes::Cubic => write!(f, "Cubic")?,
             PartialInfillTypes::Lightning => write!(f, "Lightning")?,
         }
+
         Ok(())
     }
 }
 
-/// A single 3D vertex
+/// A single 3D vertex, a point in 3d space
 #[derive(Default, Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename = "vertex")]
 pub struct Vertex {
@@ -207,7 +209,7 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    /// mul with transform in place
+    /// mul with [`Transform`] in place
     pub fn mul_transform(&mut self, transform: &Transform) {
         self.x = transform.0[0][0] * self.x
             + transform.0[0][1] * self.y
@@ -221,6 +223,30 @@ impl Vertex {
             + transform.0[2][1] * self.y
             + transform.0[2][2] * self.z
             + transform.0[2][3];
+    }
+
+    /// Get the dot product of two vectors
+    #[inline(always)]
+    pub fn dot(&self, other: &Vertex) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    /// Calculates the magnitude (length) of the vector represented by this [`Vertex`].
+    #[inline(always)]
+    pub fn magnitude(&self) -> f64 {
+        (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
+    }
+}
+
+impl Sub<Vertex> for Vertex {
+    type Output = Vertex;
+
+    fn sub(self, rhs: Vertex) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
     }
 }
 

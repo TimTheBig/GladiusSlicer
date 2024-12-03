@@ -1,5 +1,3 @@
-use gladius_shared::settings;
-
 use crate::utils::show_error_message;
 use crate::{
     debug, info, IndexedTriangle, InputObject, Loader, OsStr, PartialSettingsFile, Path, STLLoader,
@@ -7,6 +5,7 @@ use crate::{
 };
 use std::path::PathBuf;
 use std::str::FromStr;
+use log::error;
 
 /// The raw triangles and vertices of a model
 type ModelRawData = (Vec<Vertex>, Vec<IndexedTriangle>);
@@ -25,6 +24,7 @@ pub fn load_models(
             let object: InputObject = if simple_input {
                 InputObject::Auto(value.clone())
             } else {
+                error!("Use --simple_input if you don't what to specify a placement");
                 deser_hjson::from_str(&value).map_err(|_| SlicerErrors::InputMisformat)?
             };
 
@@ -59,6 +59,7 @@ pub fn load_models(
             };
 
             info!("Loading objects");
+            // todo take optional input
             let object = InputObject::Auto(value);
 
             let (x, y) = match object {
@@ -115,11 +116,9 @@ pub fn load_models(
 }
 
 pub fn load_settings_json(filepath: &str) -> Result<String, SlicerErrors> {
-    Ok(
-        std::fs::read_to_string(filepath).map_err(|_| SlicerErrors::SettingsFileNotFound {
-            filepath: filepath.to_string(),
-        })?,
-    )
+    std::fs::read_to_string(filepath).map_err(|_| SlicerErrors::SettingsFileNotFound {
+        filepath: filepath.to_string(),
+    })
 }
 
 pub fn load_settings(
@@ -127,12 +126,12 @@ pub fn load_settings(
     settings_data: &str,
 ) -> Result<Settings, SlicerErrors> {
     let partial_settings: PartialSettingsFile =
-        deser_hjson::from_str(&settings_data).map_err(|_| SlicerErrors::SettingsFileMisformat {
+        deser_hjson::from_str(settings_data).map_err(|_| SlicerErrors::SettingsFileMisformat {
             filepath: filepath.unwrap_or("Command Line Argument").to_string(),
         })?;
     let current_path = std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
     let path = if let Some(fp) = filepath {
-        let mut path = PathBuf::from_str(&fp).map_err(|_| SlicerErrors::SettingsFileNotFound {
+        let mut path = PathBuf::from_str(fp).map_err(|_| SlicerErrors::SettingsFileNotFound {
             filepath: fp.to_string(),
         })?;
         path.pop();

@@ -5,8 +5,8 @@ use crate::{
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use coordinate_position::CoordPos;
-use geo::euclidean_distance::EuclideanDistance;
 use geo::line_intersection::{line_intersection, LineIntersection};
+use geo::{Distance, Euclidean, EuclideanDistance};
 use gladius_shared::settings::LayerSettings;
 
 use rand::seq::SliceRandom;
@@ -106,7 +106,7 @@ pub fn lightning_layer(
                 closest_point_exterior_point(&infill_area, &node.location.into())
             {
                 let closest_coord: Coord<f64> = closest_point.into();
-                let distance: f64 = node.location.euclidean_distance(&closest_coord);
+                let distance: f64 = Euclidean::distance(node.location, closest_coord);
                 Some((node, distance, closest_coord))
             } else {
                 None
@@ -152,7 +152,7 @@ pub struct LightningNode {
 
 impl LightningNode {
     fn add_point_to_tree(&mut self, node: LightningNode) {
-        let self_dist = self.location.euclidean_distance(&node.location);
+        let self_dist = Euclidean::distance(self.location, node.location);
 
         if let Some((child, closest)) = self
             .children
@@ -204,7 +204,7 @@ impl LightningNode {
 
         if self.children.is_empty() {
             // No children so shorten directly
-            let line_len = self.location.euclidean_distance(&parent_location);
+            let line_len = Euclidean::distance(self.location, parent_location);
 
             if line_len > shorten_amount {
                 let dx = self.location.x - parent_location.x;
@@ -231,12 +231,12 @@ impl LightningNode {
                 // dont straighten the starts of trees
                 StraightenResponse::DoNothing
             } else {
-                let pl_dist = l.euclidean_distance(&parent_location);
-                let lc_dist = l.euclidean_distance(&child_location);
+                let pl_dist = Euclidean::distance(l, parent_location);
+                let lc_dist = Euclidean::distance(l, child_location);
                 let pl_ratio = pl_dist / (pl_dist + lc_dist);
                 let midpoint = (child_location * (1.0 - pl_ratio)) + (parent_location * pl_ratio);
 
-                let line_len = l.euclidean_distance(&midpoint);
+                let line_len = Euclidean::distance(l, midpoint);
                 if line_len > shorten_amount {
                     let dx = l.x - midpoint.x;
                     let dy = l.y - midpoint.y;
