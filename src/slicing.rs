@@ -2,10 +2,7 @@ use crate::{
      tower::TowerVertex, Coord, Object, Settings, Slice, SlicerErrors, TriangleTower, TriangleTowerIterator
 };
 use rayon::{
-    iter::{
-        IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelBridge,
-        ParallelIterator,
-    },
+    iter::{IntoParallelIterator, ParallelBridge, ParallelIterator},
     slice::ParallelSliceMut,
 };
 

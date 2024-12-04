@@ -35,7 +35,6 @@ use gladius_shared::messages::Message;
 use itertools::Itertools;
 use log::{debug, info, LevelFilter};
 use ordered_float::OrderedFloat;
-use rayon::prelude::*;
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::io::BufWriter;

@@ -175,8 +175,8 @@ impl TowerRing {
     }
 
     /// Extend the elements of **first** with all but the first element of **second**
-    fn join_rings_in_place(first: &mut TowerRing, second: &TowerRing) {
-        first.elements.extend_from_slice(&second.elements[1..]);
+    fn join_rings_in_place(first: &mut TowerRing, second: TowerRing) {
+        first.elements.extend(second.elements.into_iter().skip(1));
     }
 
     /// Split the `TowerRing` in to multiple at an edge
@@ -389,7 +389,7 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
                 let first_r = fragments
                     .get_mut(first_pos)
                     .expect("Index is validated by loop ");
-                TowerRing::join_rings_in_place(first_r, &removed);
+                TowerRing::join_rings_in_place(first_r, removed);
             } else {
                 // skip already complete elements
                 first_pos -= 1;
@@ -575,7 +575,7 @@ mod tests {
     use super::*;
 
     fn join_rings(mut first: TowerRing, second: TowerRing) -> TowerRing {
-        TowerRing::join_rings_in_place(&mut first, &second);
+        TowerRing::join_rings_in_place(&mut first, second);
 
         first
     }
