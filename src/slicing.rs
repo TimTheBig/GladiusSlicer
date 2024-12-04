@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::{
      tower::TowerVertex, Coord, Object, Settings, Slice, SlicerErrors, TriangleTower, TriangleTowerIterator
 };
@@ -6,16 +7,22 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 
-pub fn slice<V>(towers: Vec<TriangleTower<V>>, settings: &Settings) -> Result<Vec<Object>, SlicerErrors> where V : Send+ Sync+ Ord +Clone+ TowerVertex{
+pub fn slice<V>(towers: Vec<TriangleTower<V>>, settings: &Settings) -> Result<Vec<Object>, SlicerErrors>
+where V: Sync + Clone + TowerVertex + Debug {
     towers
         .into_par_iter()
         .map(|tower| {
+            // let first_vert_height = tower.vertices.first()
+            //     .expect("The tower should have at least 1 vertex")
+            //     .get_height();
             let mut tower_iter = TriangleTowerIterator::new(tower);
 
             let mut layer = 0.0;
 
+            // println!("layers: {}", (first_vert_height * settings.layer_height).round() as u32);
             let slices: Result<Vec<Slice>, SlicerErrors> = (0..u32::MAX)
                 .map(|layer_count| {
+                    println!("layer_count: {}", layer_count);
                     // Advance to the correct height
                     let layer_height = settings.get_layer_settings(layer_count, layer).layer_height;
 
@@ -27,6 +34,7 @@ pub fn slice<V>(towers: Vec<TriangleTower<V>>, settings: &Settings) -> Result<Ve
                     let top_height = layer;
 
                     // Get the ordered lists of points
+                    println!("{:?}", (bottom_height, top_height, tower_iter.get_points()));
                     Ok((bottom_height, top_height, tower_iter.get_points()))
                 })
                 .take_while(|r| {
@@ -62,7 +70,7 @@ pub fn slice<V>(towers: Vec<TriangleTower<V>>, settings: &Settings) -> Result<Ve
                 .collect();
             let mut s = slices?;
 
-            //sort as parbridge isn't garenteed to return in order
+            //sort as parbridge isn't guaranteed to return in order
             s.par_sort_by(|a, b| {
                 a.top_height
                     .partial_cmp(&b.top_height)

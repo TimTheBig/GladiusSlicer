@@ -251,7 +251,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    /// Genarate the json schema for `Settings`
+    /// Generate the json schema for `Settings`
     #[cfg(feature = "json_schema_gen")]
     pub fn gen_schema(path: &std::path::Path) -> Result<(), std::io::Error> {
         use std::{fs::File, io::Write};
@@ -866,7 +866,7 @@ pub struct PartialSettingsFile {
     /// Other files to load
     pub other_files: Option<Vec<String>>,
 
-    ///The incompete settings that this files comtains that will be prioritized over the contents of the other files
+    ///The incomplete settings that this files contains that will be prioritized over the contents of the other files
     #[serde(flatten)]
     pub partial_settings: PartialSettings,
 }

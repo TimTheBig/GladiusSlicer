@@ -118,6 +118,8 @@ pub fn point_lerp(a: &Coord<f64>, b: &Coord<f64>, f: f64) -> Coord<f64> {
     }
 }
 
+/// ## Linear Interpolate
+/// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
 #[inline]
 pub fn lerp(a: f64, b: f64, f: f64) -> f64 {
     a + f * (b - a)

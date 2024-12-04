@@ -19,6 +19,7 @@ pub fn convert(
         write_buf,
         ";========== date: {} ==================",
         time::OffsetDateTime::now_utc()
+            .to_offset(time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC))
             .format(&Iso8601::DATE)
             .expect("This is a valid format")
     )
