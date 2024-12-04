@@ -1,10 +1,6 @@
 use crate::SlicerErrors;
 use gladius_shared::types::{IndexedTriangle, Vertex};
-use log::trace;
-use ordered_float::OrderedFloat;
-use rayon::collections::binary_heap;
-use rayon::prelude::*;
-use binary_heap_plus::{BinaryHeap, FnComparator, MinComparator};
+use binary_heap_plus::{BinaryHeap, MinComparator};
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -149,6 +145,7 @@ impl<V> PartialOrd for TowerVertexEvent<V>  where V: Ord{
         Some(self.cmp(other))
     }
 }
+
 impl<V> Ord for TowerVertexEvent<V> where V: Ord{
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.start_vert
@@ -491,7 +488,7 @@ impl<V> TriangleTowerIterator<V> where V : Clone+Ord + TowerVertex{
     }
 }
 
-pub fn create_towers<V> (
+pub fn create_towers<V: TowerVertex> (
     models: &[(Vec<Vertex>, Vec<IndexedTriangle>)],
 ) -> Result<Vec<TriangleTower<V>>, SlicerErrors> where V : Ord + Clone+TowerVertex{
     models
@@ -502,47 +499,73 @@ pub fn create_towers<V> (
         .collect()
 }
 
-pub trait TowerVertex{
-    //Convert from vertex to this type 
+pub trait TowerVertex: Ord + Send + Eq {
+    /// Convert from vertex to this type 
     fn from_vertex(vertex: Vertex) -> Self;
 
-    //Return the height of this vertex
+    /// Gets the z, **not** height, of the vertex
+    fn get_z(&self) -> f64;
+
+    /// Return the height of this vertex
     fn get_height(&self) -> f64;
 
-    //gets the x position for slicing purposes 
+    /// Gets the x position for slicing purposes 
     fn get_slice_x(&self) -> f64;
 
-    //gets the y position for slicing purposes 
+    /// Gets the y position for slicing purposes 
     fn get_slice_y(&self) -> f64;
 
-    //gets the vertex at the specified height between start and end
+    /// Gets the vertex at the specified height between start and end
     fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self;
 
+    /// Get the dot product of two tower vertices
+    /// This must not use get_height
+    #[inline]
+    fn dot<V: TowerVertex>(&self, other: &V) -> f64 {
+        self.get_slice_x() * other.get_slice_x()
+        +
+        self.get_slice_y() * other.get_slice_y()
+        +
+        self.get_z() * other.get_z()
+    }
 }
 
 impl TowerVertex for Vertex {
+    #[inline]
     fn from_vertex(vertex: Vertex) -> Self {
-        //No type convertion needed
+        // No type convertion needed
         vertex
     }
 
-    fn get_height(&self) -> f64 {
-        //height is just Z position
+    fn get_z(&self) -> f64 {
         self.z
     }
 
+    fn get_height(&self) -> f64 {
+        // height is just Z position
+        // self.z
+        self.dot(&Vertex {
+            x: 1.0,
+            y: 0.0,
+            z: 1.0,
+        })
+    }
+
+    #[inline]
     fn line_height_intersection(height: f64, v_start: &Vertex, v_end: &Vertex) -> Vertex {
-        //Lerps from start to end given the height
+        // Lerps from start to end given the height
         line_z_intersection(height, v_start, v_end)
     }
     
+    #[inline]
     fn get_slice_x(&self) -> f64 {
-        //slice just uses x position
+        // slice just uses x position
         self.x
     }
     
+    #[inline]
     fn get_slice_y(&self) -> f64 {
-        //slice just uses y position
+        // slice just uses y position
         self.y
     }
 }

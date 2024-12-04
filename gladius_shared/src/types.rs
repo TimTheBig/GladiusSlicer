@@ -229,6 +229,7 @@ impl From<Vertex> for Point3<f64> {
         Point3::new(v.x, v.y, v.z)
     }
 }
+
 impl Eq for Vertex {}
 
 impl Ord for Vertex {
