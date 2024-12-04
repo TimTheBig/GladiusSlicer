@@ -448,6 +448,10 @@ impl<V> TriangleTowerIterator<V> where V: Clone + TowerVertex {
         }
     }
 
+    pub fn is_finished(&self) -> bool {
+        self.tower.tower_vertices.is_empty()
+    }
+
     pub fn advance_to_height(&mut self, z: f64) -> Result<(), SlicerErrors> {
         while self.tower.get_height_of_next_vertex() < z && !self.tower.tower_vertices.is_empty() {
             let pop_tower_vert = self.tower.tower_vertices.pop().expect("Validated above");

@@ -34,12 +34,11 @@ where V: Sync + Clone + TowerVertex + Debug {
                     let top_height = layer;
 
                     // Get the ordered lists of points
-                    println!("{:?}", (bottom_height, top_height, tower_iter.get_points()));
-                    Ok((bottom_height, top_height, tower_iter.get_points()))
+                    Ok((bottom_height, top_height, tower_iter.get_points(),tower_iter.is_finished()))
                 })
                 .take_while(|r| {
-                    if let Ok((_, _, layer_loops)) = r {
-                        !layer_loops.is_empty()
+                    if let Ok((_, _, _, finished)) = r {
+                        !finished
                     } else {
                         true
                     }
@@ -47,7 +46,7 @@ where V: Sync + Clone + TowerVertex + Debug {
                 .enumerate()
                 .par_bridge()
                 .map(|(count, result)| {
-                    result.and_then(|(bot, top, layer_loops)| {
+                    result.and_then(|(bot, top, layer_loops,_)| {
                         // Add this slice to the
                         let slice = Slice::from_multiple_point_loop(
                             layer_loops
