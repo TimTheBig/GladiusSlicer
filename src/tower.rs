@@ -645,8 +645,12 @@ impl Eq for NormalVertex {}
 
 impl Ord for NormalVertex {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // get the normal to project on for z
+        let normal = PLANE_NORMAL.get()
+            .expect("This is initialized before this can be called in main");
+
         if self.z != other.z {
-            self.z.partial_cmp(&other.z).expect("Non-NAN")
+            self.dot(normal).partial_cmp(&other.dot(normal)).expect("Non-NAN")
         } else if self.y != other.y {
             self.y.partial_cmp(&other.y).expect("Non-NAN")
         } else {
@@ -669,13 +673,18 @@ impl TowerVertex for NormalVertex {
     fn get_height(&self) -> f64 {
         // height is just Z position
         // self.z
-        self.dot(PLANE_NORMAL.get().expect("This is initshalised before this can be called in main"))
+        self.dot(PLANE_NORMAL.get()
+            .expect("This is initialized before this can be called in main")
+        )
     }
 
     #[inline]
     fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self {
         // Lerps from start to end given the height
-        plane_intersection(height, v_start, v_end, PLANE_NORMAL.get().expect("This is initshalised before this can be called in main")) // ? is this ok in a test
+        plane_intersection(height, v_start, v_end,
+            // this needs to be initialized in a test
+            PLANE_NORMAL.get().expect("This is initialized before this can be called in main")
+        )
     }
 
     #[inline]
