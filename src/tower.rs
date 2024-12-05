@@ -7,7 +7,7 @@
     progress up tower
 */
 
-use crate::SlicerErrors;
+use crate::{SlicerErrors, PLANE_NORMAL};
 use gladius_shared::types::{IndexedTriangle, Vertex};
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use std::fmt::{Display, Formatter};
@@ -46,10 +46,10 @@ fn line_z_intersection(z: f64, v_start: &Vertex, v_end: &Vertex) -> Vertex {
 /// Calculate the intersection of a line with a plane defined by `normal` and `plane_height`
 fn plane_intersection(
     plane_height: f64,
-    v_start: &Vertex,
-    v_end: &Vertex,
+    v_start: &NormalVertex,
+    v_end: &NormalVertex,
     normal: &Vertex,
-) -> Vertex {
+) -> NormalVertex {
     // project on to plane
     let start_proj = v_start.dot(normal);
     let end_proj = v_end.dot(normal);
@@ -61,7 +61,7 @@ fn plane_intersection(
     let y = lerp(v_start.y, v_end.y, t);
     let z = lerp(v_start.z, v_end.z, t);
 
-    Vertex { x, y, z }
+    NormalVertex { x, y, z }
 }
 
 /// A set of triangles and their associated vertices
@@ -535,6 +535,7 @@ where V: Clone + TowerVertex {
         .collect()
 }
 
+// todo add tests
 pub trait TowerVertex: Ord + Send + Eq + From<Vertex> {
     /// Convert from vertex to this type
     #[inline]
@@ -569,7 +570,7 @@ pub trait TowerVertex: Ord + Send + Eq + From<Vertex> {
     }
 }
 
-fn angle_to_normal(slice_angle: f64) -> Vertex {
+pub fn angle_to_normal(slice_angle: f64) -> Vertex {
     // println!("{}", slice_angle);
     // Convert slice angle from degrees to radians
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
@@ -577,9 +578,9 @@ fn angle_to_normal(slice_angle: f64) -> Vertex {
     // Calculate the normal vector based on the angle
     // todo in XZ plane mode switch x and y then z and y
     let plane_normal = Vertex {
-        x: 0.01, // slice_angle_radians.cos(),
+        x: slice_angle_radians.cos(),
         y: 0.0,
-        z: 1.0, // slice_angle_radians.sin(),
+        z: slice_angle_radians.sin(),
     };
     // println!("{:?}", plane_normal);
     plane_normal
@@ -599,14 +600,82 @@ impl TowerVertex for Vertex {
     fn get_height(&self) -> f64 {
         // height is just Z position
         // self.z
-        self.dot(&angle_to_normal(45.0))
+        self.z
     }
 
     #[inline]
     fn line_height_intersection(height: f64, v_start: &Vertex, v_end: &Vertex) -> Vertex {
         // Lerps from start to end given the height
-        // line_z_intersection(height, v_start, v_end)
-        plane_intersection(height, v_start, v_end, &angle_to_normal(45.0))
+        line_z_intersection(height, v_start, v_end)
+    }
+
+    #[inline]
+    fn get_slice_x(&self) -> f64 {
+        // slice just uses x position
+        self.x
+    }
+    
+    #[inline]
+    fn get_slice_y(&self) -> f64 {
+        // slice just uses y position
+        self.y
+    }
+}
+
+/// A single 3D vertex, with normal vertex perjection based methods
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct NormalVertex {
+    /// X Coord
+    pub x: f64,
+
+    /// Y Coord
+    pub y: f64,
+
+    /// Z Coord
+    pub z: f64,
+}
+
+impl From<Vertex> for NormalVertex {
+    fn from(vert: Vertex) -> Self {
+        Self { x: vert.x, y: vert.y, z: vert.z }
+    }
+}
+
+impl Eq for NormalVertex {}
+
+impl Ord for NormalVertex {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        if self.z != other.z {
+            self.z.partial_cmp(&other.z).expect("Non-NAN")
+        } else if self.y != other.y {
+            self.y.partial_cmp(&other.y).expect("Non-NAN")
+        } else {
+            self.x.partial_cmp(&other.x).expect("Non-NAN")
+        }
+    }
+}
+
+impl PartialOrd for NormalVertex {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl TowerVertex for NormalVertex {
+    fn get_z(&self) -> f64 {
+        self.z
+    }
+
+    fn get_height(&self) -> f64 {
+        // height is just Z position
+        // self.z
+        self.dot(PLANE_NORMAL.get().expect("This is initshalised before this can be called in main"))
+    }
+
+    #[inline]
+    fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self {
+        // Lerps from start to end given the height
+        plane_intersection(height, v_start, v_end, PLANE_NORMAL.get().expect("This is initshalised before this can be called in main")) // ? is this ok in a test
     }
 
     #[inline]

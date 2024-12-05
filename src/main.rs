@@ -52,6 +52,8 @@ mod test;
 mod tower;
 mod utils;
 
+pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new();
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[clap(group(
@@ -152,6 +154,9 @@ fn main() {
         &state_context,
     );
 
+    // Set the plane normal
+    PLANE_NORMAL.get_or_init(|| tower::angle_to_normal(settings.slice_angle.unwrap_or(0.0)));
+
     let models = handle_err_or_return(
         crate::input::load_models(Some(args.input), &settings, args.simple_input),
         &state_context,
@@ -173,7 +178,7 @@ fn main() {
 
     state_update("Creating Towers", &mut state_context);
 
-    let towers: Vec<TriangleTower<_>> = handle_err_or_return(create_towers::<Vertex>( &models), &state_context);
+    let towers: Vec<TriangleTower<_>> = handle_err_or_return(create_towers::<tower::NormalVertex>(&models), &state_context);
 
     state_update("Slicing", &mut state_context);
 
