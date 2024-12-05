@@ -1,13 +1,17 @@
-use std::fmt::Debug;
 use crate::{
-     tower::TowerVertex, Coord, Object, Settings, Slice, SlicerErrors, TriangleTower, TriangleTowerIterator
+    tower::TowerVertex, Coord, Object, Settings, Slice, SlicerErrors, TriangleTower,
+    TriangleTowerIterator,
 };
 use rayon::{
     iter::{IntoParallelIterator, ParallelBridge, ParallelIterator},
     slice::ParallelSliceMut,
 };
+use std::fmt::Debug;
 
-pub fn slice<V>(towers: Vec<TriangleTower<V>>, settings: &Settings) -> Result<Vec<Object>, SlicerErrors>
+pub fn slice<V>(
+    towers: Vec<TriangleTower<V>>,
+    settings: &Settings,
+) -> Result<Vec<Object>, SlicerErrors>
 where V: Sync + Clone + TowerVertex + Debug {
     towers
         .into_par_iter()
@@ -46,7 +50,7 @@ where V: Sync + Clone + TowerVertex + Debug {
                 .enumerate()
                 .par_bridge()
                 .map(|(count, result)| {
-                    result.and_then(|(bot, top, layer_loops,_)| {
+                    result.and_then(|(bot, top, layer_loops, _)| {
                         // Add this slice to the
                         let slice = Slice::from_multiple_point_loop(
                             layer_loops
@@ -54,7 +58,10 @@ where V: Sync + Clone + TowerVertex + Debug {
                                 .map(|verts| {
                                     verts
                                         .iter()
-                                        .map(|v| Coord { x: v.get_slice_x(), y: v.get_slice_y() })
+                                        .map(|v| Coord {
+                                            x: v.get_slice_x(),
+                                            y: v.get_slice_y(),
+                                        })
                                         .collect::<Vec<Coord<f64>>>()
                                 })
                                 .collect(),

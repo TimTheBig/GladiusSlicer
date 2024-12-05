@@ -178,7 +178,10 @@ fn main() {
 
     state_update("Creating Towers", &mut state_context);
 
-    let towers: Vec<TriangleTower<_>> = handle_err_or_return(create_towers::<tower::NormalVertex>(&models), &state_context);
+    let towers: Vec<TriangleTower<_>> = handle_err_or_return(
+        create_towers::<tower::NormalVertex>(&models),
+        &state_context,
+    );
 
     state_update("Slicing", &mut state_context);
 
@@ -262,18 +265,18 @@ fn main() {
 }
 
 /// Display info about the print; time and filament info
-fn print_info_message( state_context: &StateContext, moves: &[Command], settings: &Settings) {
+fn print_info_message(state_context: &StateContext, moves: &[Command], settings: &Settings) {
     let cv = calculate_values(moves, settings);
 
-    match state_context.display_type{
+    match state_context.display_type {
         DisplayType::Message => {
             let message = Message::CalculatedValues(cv);
             bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
                 .expect("Write Limit should not be hit");
-        },
+        }
         DisplayType::StdOut => {
             let (hour, min, sec, _) = cv.get_hours_minutes_seconds_fract_time();
-    
+
             info!(
                 "Total Time: {} hours {} minutes {:.3} seconds",
                 hour, min, sec
@@ -292,9 +295,8 @@ fn print_info_message( state_context: &StateContext, moves: &[Command], settings
                 (((cv.plastic_volume / 1000.0) * settings.filament.density) / 1000.0)
                     * settings.filament.cost
             );
-        },
+        }
     }
-
 }
 
 fn generate_moves(

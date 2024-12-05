@@ -250,7 +250,6 @@ impl PartialOrd for Vertex {
     }
 }
 
-
 impl Transform {
     /// create a new transform for translation
     pub const fn new_translation_transform(x: f64, y: f64, z: f64) -> Self {

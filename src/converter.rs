@@ -1,8 +1,8 @@
 use crate::{Command, Settings};
 use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMapContext};
 use gladius_shared::{error::SlicerErrors, settings::SettingsPrint, types::RetractionType};
-use time::format_description::well_known::Iso8601;
 use std::io::{BufWriter, Write};
+use time::format_description::well_known::Iso8601;
 
 pub fn convert(
     cmds: &[Command],

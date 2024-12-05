@@ -193,11 +193,10 @@ fn handle_mesh(mesh: &ThreeMFMesh) -> Vec<IndexedTriangle> {
     let mut triangles = vec![];
 
     for triangle in &mesh.triangles.list {
-        let mut converted_tri = IndexedTriangle {
+        let converted_tri = IndexedTriangle {
             verts: [triangle.v1, triangle.v2, triangle.v3],
         };
         triangles.push(converted_tri);
-
     }
 
     triangles

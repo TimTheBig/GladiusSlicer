@@ -8,12 +8,12 @@ use crate::types::{MoveType, PartialInfillTypes, SolidInfillTypes};
 use crate::warning::SlicerWarnings;
 // for exclude area setting
 use geo::MultiPolygon;
+use geo_validity_check::Valid;
 use gladius_proc_macros::Settings;
+use log::trace;
 #[cfg(feature = "json_schema_gen")]
 /// json schema gen
 use schemars::{schema_for, JsonSchema};
-use geo_validity_check::Valid;
-use log::trace;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
