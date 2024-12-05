@@ -634,14 +634,15 @@ impl Eq for NormalVertex {}
 impl Ord for NormalVertex {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // get the normal to project on for z
-        let normal = PLANE_NORMAL
-            .get()
+        let normal = PLANE_NORMAL.get()
             .expect("This is initialized before this can be called in main");
 
-        if self.z != other.z {
-            self.dot(normal)
-                .partial_cmp(&other.dot(normal))
-                .expect("Non-NAN")
+        let c = self.dot(normal).partial_cmp(&other.dot(normal)).expect("Non-NAN");
+
+        if c != std::cmp::Ordering::Equal {
+            c
+        } else if self.z != other.z {
+            self.z.partial_cmp(&other.z).expect("Non-NAN")
         } else if self.y != other.y {
             self.y.partial_cmp(&other.y).expect("Non-NAN")
         } else {

@@ -73,6 +73,7 @@ macro_rules! option_setting_less_than_zero {
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
 #[derive(Settings, Serialize, Deserialize, Debug)]
 pub struct Settings {
+    #[cfg_attr(feature = "json_schema_gen", schemars(example = "0.2"))]
     /// The height of the layers
     pub layer_height: f64,
 
@@ -256,7 +257,7 @@ pub struct Settings {
 
     #[Optional]
     #[cfg_attr(feature = "json_schema_gen", validate(range(min = -89.0, max = 89.0)))]
-    /// The tilt angle of the slicing plane from the Z-axis in degrees
+    /// The tilt angle of the slicing plane from the Z-axis in degrees, **0** if flat
     pub slice_angle: Option<f64>,
 }
 
