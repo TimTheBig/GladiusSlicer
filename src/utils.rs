@@ -111,7 +111,7 @@ pub fn point_y_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64) -> Coord<f64> {
 }
 
 #[inline]
-pub fn point_lerp(a: &Coord<f64>, b: &Coord<f64>, f: f64) -> Coord<f64> {
+pub fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
     Coord {
         x: lerp(a.x, b.x, f),
         y: lerp(a.y, b.y, f),

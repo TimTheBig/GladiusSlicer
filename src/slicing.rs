@@ -23,10 +23,11 @@ where V: Sync + Clone + TowerVertex + Debug {
 
             let mut layer = 0.0;
 
-            // println!("layers: {}", (first_vert_height * settings.layer_height).round() as u32);
-            let slices: Result<Vec<Slice>, SlicerErrors> = (0..u32::MAX)
+            // println!("layers: {}", (settings.print_z / settings.layer_height).round() as u32);
+            // loop in max layers of printer
+            let slices: Result<Vec<Slice>, SlicerErrors> = (0..(settings.print_z / settings.layer_height).round() as u32)
                 .map(|layer_count| {
-                    println!("layer_count: {}", layer_count);
+                    eprintln!("layer_count: {}", layer_count);
                     // Advance to the correct height
                     let layer_height = settings.get_layer_settings(layer_count, layer).layer_height;
 

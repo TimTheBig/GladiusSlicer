@@ -345,17 +345,17 @@ impl Plotter for Slice {
 
                         let mut remaining_distance = retraction_wipe.distance;
                         let mut wipe_moves = ordered
-                            .iter()
+                            .into_iter()
                             .tuple_windows::<(_, _)>()
                             .map(|(cur_point, next_point)| {
-                                let len: f64 = cur_point.euclidean_distance(next_point);
+                                let len: f64 = Euclidean::distance(cur_point, next_point);
 
                                 (len, cur_point, next_point)
                             })
                             .filter_map(|(len, cur_point, next_point)| {
                                 if remaining_distance - len > 0.0 {
                                     remaining_distance -= len;
-                                    Some((len, *next_point))
+                                    Some((len, next_point))
                                 } else if remaining_distance > 0.0 {
                                     let ret = (
                                         remaining_distance,

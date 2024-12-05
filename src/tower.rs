@@ -490,8 +490,6 @@ where V: Clone + TowerVertex {
                             end_index,
                             ..
                         } = e {
-                            // ! ? This never hapenss
-                            println!("intersection time");
                             Some(V::line_height_intersection(
                                 self.z_height,
                                 &self.tower.vertices[*start_index],
