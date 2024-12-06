@@ -189,7 +189,7 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
                     (usize, (&Coord<f64>, &Coord<f64>)),
                 )>()
                 .map(|((pos, l1), (_, l2))| {
-                    // todo try to avod copy
+                    // todo try to avoid copy
                     (pos, line_bisector(*l1.0, *l1.1, *l2.1))
                 })
                 // bisector -> center, radius

@@ -33,7 +33,7 @@ impl Loader for STLLoader {
             .collect::<Vec<Vertex>>();
 
         for triangle in mesh.triangles() {
-            let mut converted_tri = IndexedTriangle {
+            let converted_tri = IndexedTriangle {
                 verts: [
                     triangle.vertices_indices()[0],
                     triangle.vertices_indices()[1],

@@ -11,6 +11,7 @@ use crate::utils::lerp;
 use crate::{SlicerErrors, PLANE_NORMAL};
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use gladius_shared::types::{IndexedTriangle, Vertex};
+use log::trace;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -375,7 +376,7 @@ impl Hash for TowerRingElement {
 // A ring can be joined if its last element matches another rings first element
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
     //early return for empty fragments
-    if fragments.len() == 0 {
+    if fragments.is_empty() {
         return;
     }
 
@@ -558,19 +559,18 @@ pub trait TowerVertex: Ord + Send + Eq + From<Vertex> {
 }
 
 pub fn angle_to_normal(slice_angle: f64) -> Vertex {
-    // println!("{}", slice_angle);
+    trace!("{}", slice_angle);
     // Convert slice angle from degrees to radians
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
 
     // Calculate the normal vector based on the angle
     // todo in XZ plane mode switch x and y then z and y
-    let plane_normal = Vertex {
+    // plane_normal
+    Vertex {
         x: slice_angle_radians.cos(),
         y: 0.0,
         z: slice_angle_radians.sin(),
-    };
-    // println!("{:?}", plane_normal);
-    plane_normal
+    }
 }
 
 impl TowerVertex for Vertex {

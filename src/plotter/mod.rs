@@ -19,10 +19,12 @@ use itertools::Itertools;
 use log::info;
 use ordered_float::OrderedFloat;
 
+// todo document
 pub trait Plotter {
     fn slice_perimeters_into_chains(&mut self, number_of_perimeters: usize);
     fn shrink_layer(&mut self);
     fn fill_remaining_area(&mut self, solid: bool, layer_count: usize);
+    /// For each area not in this slice that is in the other polygon, fill solid
     fn fill_solid_subtracted_area(&mut self, other: &MultiPolygon<f64>, layer_count: usize);
     fn fill_solid_bridge_area(&mut self, layer_below: &MultiPolygon<f64>);
     fn fill_solid_top_layer(&mut self, layer_above: &MultiPolygon<f64>, layer_count: usize);
@@ -286,14 +288,14 @@ impl Plotter for Slice {
                     .iter()
                     .position_min_by_key(|a| {
                         OrderedFloat(
-                            ordered_chains
-                                .last()
-                                .expect("Chains is tests not to be empty")
-                                .moves
-                                .last()
-                                .expect("chain should contain moves")
-                                .end
-                                .euclidean_distance(&a.start_point),
+                            Euclidean::distance(
+                                ordered_chains
+                                    .last().expect("Chains is tests not to be empty")
+                                    .moves
+                                    .last().expect("chain should contain moves")
+                                    .end,
+                                a.start_point,
+                            ),
                         )
                     })
                     .expect("Chains is tests not to be empty");

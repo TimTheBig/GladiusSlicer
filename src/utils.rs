@@ -35,10 +35,10 @@ impl StateContext {
     }
 
     pub fn get_total_elapsed_time(&self) -> Duration {
-        let elapsed = SystemTime::now()
+        // elapsed
+        SystemTime::now()
             .duration_since(self.start_time)
-            .expect("Time can only go forward");
-        elapsed
+            .expect("Time can only go forward")
     }
 }
 

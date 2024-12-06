@@ -149,6 +149,7 @@ pub enum SolidInfillTypes {
     /// Back and forth lines to fill polygons, rotating custom degrees each layer
     RectilinearCustom(f64),
 }
+
 impl Display for SolidInfillTypes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -48,9 +48,10 @@ mod optimizer;
 mod plotter;
 mod slice_pass;
 mod slicing;
-mod test;
 mod tower;
 mod utils;
+#[cfg(test)]
+mod test;
 
 pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new();
 

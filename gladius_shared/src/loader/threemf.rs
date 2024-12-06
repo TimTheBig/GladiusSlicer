@@ -8,6 +8,7 @@ struct Relationships {
     relationship: Vec<Relationship>,
 }
 
+// todo document
 #[derive(Deserialize, Debug)]
 struct Relationship {
     #[serde(rename = "Type")]

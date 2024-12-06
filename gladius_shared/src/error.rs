@@ -190,7 +190,7 @@ impl SlicerErrors {
                 (0x1014, "Slicer generated move outside build area.".to_string())
             }
             SlicerErrors::SettingMacroParseError { sub_error  }=> {
-                (0x1015,format!("Prasing the Macros Failed with error: {}",sub_error))
+                (0x1015, format!("Parsing the Macros Failed with error: {}", sub_error))
             }
             SlicerErrors::InExcludeArea(area) => {
                 (0x1016, format!("A model intersected with this excluded area: {:?}", area))
