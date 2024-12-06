@@ -137,7 +137,6 @@ pub fn load_settings(
         current_path
     };
 
-    let settings = partial_settings.get_settings(path)?;
-
-    Ok(settings)
+    // settings
+    partial_settings.get_settings(path)
 }

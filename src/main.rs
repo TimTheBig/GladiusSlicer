@@ -56,7 +56,9 @@ mod test;
 pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new();
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about,
+    long_about = "An *In-Progress* Slicer for FDM 3D printing written in Rust with a focus on customization and modularity."
+)]
 #[clap(group(
     clap::ArgGroup::new("settings-group")
         .required(true)
@@ -65,7 +67,9 @@ pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new(
 struct Args {
     #[arg(
         required = true,
-        help = "The input files and there translations.\nBy default it takes a list of json strings that represents how the models should be loaded and translated.\nSee simple_input for an alternative command. "
+        help = "The input files and there translations.
+By default it takes a list of json strings that represents how the models should be loaded and translated.
+See simple_input for an alternative command."
     )]
     input: Vec<String>,
 
@@ -242,7 +246,7 @@ fn main() {
                 handle_err_or_return(convert(&moves, &settings, &mut gcode), &state_context);
                 let message = Message::GCode(
                     String::from_utf8(gcode)
-                        .expect("All write occur from write macro so should be utf8"),
+                        .expect("All write occur from write macro so should be utf-8"),
                 );
                 bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
                     .expect("Write Limit should not be hit");
