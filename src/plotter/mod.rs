@@ -292,7 +292,7 @@ impl Plotter for Slice {
                                 ordered_chains
                                     .last().expect("Chains is tests not to be empty")
                                     .moves
-                                    .last().expect("chain should contain moves")
+                                    .last().expect("Chain should contain moves")
                                     .end,
                                 a.start_point,
                             ),

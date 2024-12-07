@@ -1,5 +1,6 @@
 use crate::{
-    tower::TowerVertex, Coord, Object, Settings, Slice, SlicerErrors, TriangleTower, TriangleTowerIterator
+    tower::TowerVertex, Coord, Object, Settings, Slice,
+    SlicerErrors, TriangleTower, TriangleTowerIterator,
 };
 use rayon::{
     iter::{IntoParallelIterator, ParallelBridge, ParallelIterator},
@@ -20,7 +21,8 @@ where V: Sync + Clone + TowerVertex + Debug {
             let mut layer = 0.0;
 
             // loop in max layers of printer
-            let slices: Result<Vec<Slice>, SlicerErrors> = (0..(settings.print_z / settings.layer_height).round() as u32)
+            let slices: Result<Vec<Slice>, SlicerErrors> =
+                (0..(settings.print_z / settings.layer_height).round() as u32)
                 .map(|layer_count| {
                     // Advance to the correct height
                     let layer_height = settings.get_layer_settings(layer_count, layer).layer_height;

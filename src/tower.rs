@@ -635,7 +635,9 @@ impl Ord for NormalVertex {
         let normal = PLANE_NORMAL.get()
             .expect("This is initialized before this can be called in main");
 
-        let c = self.dot(normal).partial_cmp(&other.dot(normal)).expect("Non-NAN");
+        let c = self.dot(normal)
+            .partial_cmp(&other.dot(normal))
+            .expect("Non-NAN");
 
         if c != std::cmp::Ordering::Equal {
             c
@@ -675,7 +677,7 @@ impl TowerVertex for NormalVertex {
         plane_intersection(height, v_start, v_end,
             // this needs to be initialized in a test
             PLANE_NORMAL.get()
-                .expect("This is initialized before this can be called in main")
+                .expect("This is initialized before this can be called in main"),
         )
     }
 

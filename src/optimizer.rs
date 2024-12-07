@@ -1,4 +1,4 @@
-use geo::{Coord, Euclidean, Length, Line, Distance};
+use geo::{Coord, Distance, Euclidean, Length, Line};
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, RetractionType, StateChange};
 use itertools::Itertools;

@@ -5,8 +5,8 @@ use crate::{
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use coordinate_position::CoordPos;
-use geo::{Euclidean, Distance};
 use geo::line_intersection::{line_intersection, LineIntersection};
+use geo::{Distance, Euclidean};
 use gladius_shared::settings::LayerSettings;
 
 use rand::seq::SliceRandom;

@@ -56,7 +56,8 @@ mod test;
 pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new();
 
 #[derive(Parser)]
-#[command(author, version, about,
+#[command(
+    author, version, about,
     long_about = "An *In-Progress* Slicer for FDM 3D printing written in Rust with a focus on customization and modularity."
 )]
 #[clap(group(
