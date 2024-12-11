@@ -23,7 +23,6 @@ pub fn derive_proc_macro_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
         let partial_to_strings_internals = transform_fields_partial_to_strings_internals(&data_struct);
 
       quote! {
-
         // Make PartialSettings struct
         // each field  gets an entry
         // field : Option<Type> 

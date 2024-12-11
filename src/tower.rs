@@ -375,17 +375,17 @@ impl Hash for TowerRingElement {
 // Join fragmented rings together to for new rings
 // A ring can be joined if its last element matches another rings first element
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
-    //early return for empty fragments
+    // Early return for empty fragments
     if fragments.is_empty() {
         return;
     }
 
-    //Sort elements for binary search
+    // Sort elements for binary search
     // sorted by the first element in the tower
     fragments.sort();
     let mut first_pos = fragments.len() - 1;
     while first_pos > 0 {
-        //binary search for a matching first element to the current pos last element
+        // binary search for a matching first element to the current pos last element
         if let Ok(index) = fragments.binary_search_by_key(
             &fragments[first_pos]
                 .elements
@@ -397,25 +397,25 @@ fn join_fragments(fragments: &mut Vec<TowerRing>) {
                     .expect("Tower rings must contain elements ")
             },
         ) {
-            //Test if this is a complete ring. ie the rings first element and last are identical
+            // Test if this is a complete ring. ie the rings first element and last are identical
             if index != first_pos {
-                // if the removed element is less that the current element the currently element will be moved by the remove command
+                // If the removed element is less that the current element the currently element will be moved by the remove command
                 if index < first_pos {
                     first_pos -= 1;
                 }
 
-                //remove the ring and join to the current ring
+                // Remove the ring and join to the current ring
                 let removed = fragments.remove(index);
                 let first_r = fragments
                     .get_mut(first_pos)
                     .expect("Index is validated by loop ");
                 TowerRing::join_rings_in_place(first_r, removed);
             } else {
-                // skip already complete elements
+                // Skip already complete elements
                 first_pos -= 1;
             }
         } else {
-            //if no match is found, move to next element
+            // If no match is found, move to next element
             first_pos -= 1;
         }
     }
@@ -564,12 +564,15 @@ pub fn angle_to_normal(slice_angle: f64) -> Vertex {
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
 
     // Calculate the normal vector based on the angle
-    // todo in XZ plane mode switch x and y then z and y
+    // In XZ plane mode switch x and z then z and y
     // plane_normal
     Vertex {
-        x: slice_angle_radians.cos(),
+        // 0.0 when angle is zero, 0.7071067812 when angle is 45.0
+        x: slice_angle_radians.sin(),
+        // not involved in angled slicing
         y: 0.0,
-        z: slice_angle_radians.sin(),
+        // 1.0 when angle is zero, so dot product is z, 0.7071067812 when angle is 45.0
+        z: slice_angle_radians.cos(),
     }
 }
 

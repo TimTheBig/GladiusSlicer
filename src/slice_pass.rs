@@ -202,7 +202,7 @@ impl SlicePass for TopAndBottomLayersPass {
             .enumerate()
             .map(|(q, _slice)| {
                 if (bottom_layers..slices.len() - top_layers).contains(&q) {
-                    //calculate the intersection of the bottom_layers amount of layers below
+                    // calculate the intersection of the bottom_layers amount of layers below
                     let below = if bottom_layers != 0 {
                         Some(
                             slices[(q - bottom_layers + 1)..q].iter().fold(
@@ -217,7 +217,7 @@ impl SlicePass for TopAndBottomLayersPass {
                     } else {
                         None
                     };
-                    //calculate the intersection of the top_layers amount of layers above
+                    // calculate the intersection of the top_layers amount of layers above
                     let above = if top_layers != 0 {
                         Some(
                             slices[(q + 1)..=(q + top_layers)]
@@ -236,10 +236,10 @@ impl SlicePass for TopAndBottomLayersPass {
                         None
                     };
 
-                    //merge top and bottom if Nessicary
+                    // Merge top and bottom if Nessicary
                     match (above, below) {
                         (None, None) => {
-                            //return empty multipolygon
+                            // return empty multipolygon
                             // as a None value would be filled completely
                             Some(MultiPolygon::new(Vec::new()))
                         }
@@ -258,10 +258,10 @@ impl SlicePass for TopAndBottomLayersPass {
             .enumerate()
             .for_each(|(layer, (slice, option_poly))| {
                 if let Some(poly) = option_poly {
-                    // fill the areas the are not part of the union of above and below layers
+                    // Fill the areas the are not part of the union of above and below layers
                     slice.fill_solid_subtracted_area(&poly, layer);
                 } else {
-                    //Completely fill all areas at top and bottom
+                    // Completely fill all areas at top and bottom
                     slice.fill_remaining_area(true, layer);
                 }
             });
