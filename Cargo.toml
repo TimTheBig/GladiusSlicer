@@ -13,13 +13,15 @@ members = [
 ]
 
 [features]
+# create/updates settings/schema.json
 json_schema_gen = ["gladius_shared/json_schema_gen"]
+
 [lints.clippy]
 allow-unwrap-in-tests = "allow"
 
 [dependencies]
 clap = { version = "4", features = ["derive"]}
-simple_logger = "5.0.0"
+simple_logger = "5.0"
 log = "0.4.22"
 
 nalgebra = "0.33"
