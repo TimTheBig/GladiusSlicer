@@ -42,11 +42,14 @@ impl StateContext {
     }
 }
 
+/// Whether to use `Message` mode using bincode (useful for interprocess communication)
+/// or human readable output to `StdOut`
 pub enum DisplayType {
     Message,
     StdOut,
 }
 
+/// Output an error to the stdout
 pub fn show_error_message(error: &SlicerErrors) {
     let (error_code, message) = error.get_code_and_message();
     error!("\n");
@@ -57,6 +60,8 @@ pub fn show_error_message(error: &SlicerErrors) {
     error!("**************************************************");
     error!("\n\n\n");
 }
+
+/// Send an error as bincode to the stdout
 pub fn send_error_message(error: SlicerErrors) {
     let stdout = std::io::stdout();
     let mut stdio_lock = stdout.lock();
@@ -66,6 +71,7 @@ pub fn send_error_message(error: SlicerErrors) {
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
+/// Output an warning to the stdout
 pub fn show_warning_message(warning: &SlicerWarnings) {
     let (error_code, message) = warning.get_code_and_message();
     warn!("\n");
@@ -77,6 +83,7 @@ pub fn show_warning_message(warning: &SlicerWarnings) {
     warn!("\n\n\n");
 }
 
+/// Send an warning as bincode to the stdout
 pub fn send_warning_message(warning: SlicerWarnings) {
     let stdout = std::io::stdout();
     let mut stdio_lock = stdout.lock();
@@ -102,16 +109,20 @@ pub fn state_update(state_message: &str, state_context: &mut StateContext) {
     }
 }
 
+/// Linear interpolate the x axis of two points,
+/// using y and the y of a and b to set the interpolation point.\
+/// Returns a `Coord` with the interpolated x and set y
 #[inline]
-pub fn point_y_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64) -> Coord<f64> {
+pub const fn point_y_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64) -> Coord<f64> {
     Coord {
         x: lerp(a.x, b.x, (y - a.y) / (b.y - a.y)),
         y,
     }
 }
 
+/// Linear interpolate the x and y of `Coord`s **a** and **b**
 #[inline]
-pub fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
+pub const fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
     Coord {
         x: lerp(a.x, b.x, f),
         y: lerp(a.y, b.y, f),
@@ -121,7 +132,7 @@ pub fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
 /// ## Linear Interpolate
 /// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
 #[inline]
-pub fn lerp(a: f64, b: f64, f: f64) -> f64 {
+pub const fn lerp(a: f64, b: f64, f: f64) -> f64 {
     a + f * (b - a)
 }
 
@@ -174,6 +185,7 @@ pub fn orientation(p: &Coord<f64>, q: &Coord<f64>, r: &Coord<f64>) -> Orientatio
         Orientation::Right
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
