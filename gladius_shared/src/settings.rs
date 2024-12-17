@@ -518,8 +518,8 @@ impl Settings {
         setting_less_than_zero!(self, minimum_retract_distance);
 
         if let Some(exclude_area) = self.bed_exclude_areas.as_ref() {
-            //If it fails its likely failing due to the polygon not being complete
-            //The first and last points must be the same to be complete
+            // If it fails its likely failing due to the polygon not being complete
+            // The first and last points must be the same to be complete
             if let Some(reason) = exclude_area.explain_invalidity() {
                 return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(
                     format!("{}", reason),
@@ -889,7 +889,7 @@ pub struct PartialSettingsFile {
     /// Other files to load
     pub other_files: Option<Vec<String>>,
 
-    ///The incomplete settings that this files contains that will be prioritized over the contents of the other files
+    /// The incomplete settings that this files contains that will be prioritized over the contents of the other files
     #[serde(flatten)]
     pub partial_settings: PartialSettings,
 }
@@ -901,7 +901,7 @@ impl PartialSettingsFile {
         let current_path =
             std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
 
-        //set the directory of the current directory
+        // set the directory to the current directory
         std::env::set_current_dir(&path).expect("Path checked before");
         trace!("Setting path to {:?}", path);
 
@@ -945,7 +945,7 @@ impl PartialSettingsFile {
 
             let current_path =
                 std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
-            //set the directory of the current directory
+            // set the directory of the current directory
             if path.exists() {
                 trace!("Setting path to {:?}", path);
                 std::env::set_current_dir(&path).expect("Path checked before");
@@ -1238,9 +1238,9 @@ trait Combine {
     fn combine(&mut self, other: Self);
 }
 
-///Controls how to convert settings into a list of strings
+/// Controls how to convert settings into a list of strings
 pub trait SettingsPrint {
-    ///Controls how to convert settings into a list of strings
+    /// Controls how to convert settings into a list of strings
     fn to_strings(&self) -> Vec<String>;
 }
 
@@ -1319,7 +1319,7 @@ where
         for s in s.to_strings() {
             line += &format!("{},", s);
         }
-        //remove last comma
+        // remove last comma
         line.pop();
         line += "]";
 
