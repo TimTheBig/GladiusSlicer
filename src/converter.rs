@@ -1,9 +1,15 @@
+#![deny(missing_docs)]
+
 use crate::{Command, Settings};
+/// For g-code macro math and variables
 use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMapContext};
 use gladius_shared::{error::SlicerErrors, settings::SettingsPrint, types::RetractionType};
 use std::io::{BufWriter, Write};
+/// The format that the slicing date is written in
 use time::format_description::well_known::Iso8601;
 
+/// Write the `Command`s as final g-code to the given buffer.\
+/// Current date, slicer version, and settings are added to the top as comments
 pub fn convert(
     cmds: &[Command],
     settings: &Settings,
@@ -17,7 +23,7 @@ pub fn convert(
     // Add the slicing date to the g-code
     writeln!(
         write_buf,
-        ";========== date: {} ==================",
+        ";============= slicing date: {} ==============",
         time::OffsetDateTime::now_utc()
             .to_offset(time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC))
             .format(&Iso8601::DATE)
@@ -25,10 +31,20 @@ pub fn convert(
     )
     .map_err(|_| SlicerErrors::FileWriteError)?;
 
-    // output the settings to the gcode file
+    // Add the Gladus Slicer version
+    writeln!(
+        write_buf,
+        ";========= Gladus Slicer({}) version: {} ==========",
+        env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")
+    )
+    .map_err(|_| SlicerErrors::FileWriteError)?;
+
+    // Output the settings to the g-code file
+    writeln!(write_buf, "; Settings:")
+        .map_err(|_| SlicerErrors::FileWriteError)?;
     for line in settings.to_strings() {
         writeln!(
-            //lending ; to make comment
+            // lending ; to make comment
             write_buf,
             "; {}",
             line
@@ -354,6 +370,18 @@ pub fn convert(
     Ok(())
 }
 
+/// Parse and evaluate g-code macros, returning a string to be into the g-code.\
+/// For example the macro `{1.5+4.0}`, would evaluate to a string of "5.5", or `{curr_extruder_temp+3.0}`.
+///
+/// For macro names see [`parse_macro`]
+///
+/// ## Examples
+/// ```no_run
+/// assert_eq!(
+///     convert_instructions("{1.5+3.0}", 0.0, 0, Some(1), Some(2), &Settings::default()),
+///     Ok(String::from("4.5"))
+/// );
+/// ```
 fn convert_instructions(
     instructions: &str,
     current_z_height: f64,
@@ -394,6 +422,21 @@ fn convert_instructions(
         .collect()
 }
 
+/// Interpret g-code variables then evaluate math expretions.\
+/// These variables allow start, layer change, and end g-code to adapt to the current print.
+/// 
+/// ## Examples
+/// ```no_run
+/// assert_eq!(
+///     parse_macro("1.5+3.0", 0.0, 0, Some(1), Some(2), &Settings::default()),
+///     Ok(String::from("4.5"))
+/// );
+/// // extruder_temp in default settings is 210
+/// assert_eq!(
+///     parse_macro("current_extruder_temp", 0.0, 0, Some(1), Some(2), &Settings::default()),
+///     Ok(String::from("210"))
+/// );
+/// ```
 fn parse_macro(
     expression: &str,
     current_z_height: f64,
@@ -425,7 +468,6 @@ fn parse_macro(
         "print_size_x" => float settings.print_x,
         "print_size_y" => float settings.print_y,
         "print_size_z" => float settings.print_z,
-
     }
     .map_err(|e| SlicerErrors::SettingMacroParseError {
         sub_error: e.to_string(),
