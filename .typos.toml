@@ -2,4 +2,4 @@
 extend-exclude = [".git", "settings", "test_3D_models"]
 
 [default]
-locale = "en-us"
+locale = "en"

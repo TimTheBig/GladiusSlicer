@@ -4,7 +4,7 @@ use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, IndexedTriangle, Vertex};
 use itertools::Itertools;
 
-/// Check if the point is in an excluded
+/// Check if the point is in an excluded area
 fn check_excluded(
     v_point: Point,
     bed_exclude_areas: &Option<MultiPolygon>,
@@ -18,6 +18,7 @@ fn check_excluded(
     Ok(())
 }
 
+/// Checks that all **vertices** in models are in the bed, acounting for the brim, and out of excluded areas.
 pub fn check_model_bounds(
     models: &[(Vec<Vertex>, Vec<IndexedTriangle>)],
     settings: &Settings,
@@ -31,7 +32,7 @@ pub fn check_model_bounds(
         .iter()
         .flat_map(|model| model.0.iter())
         .map(|v| {
-            // Check if the point is in an excluded
+            // Check if the point is in an excluded area
             check_excluded(Point::new(v.x, v.y), &settings.bed_exclude_areas)?;
 
             if v.x < total_offset
@@ -49,6 +50,7 @@ pub fn check_model_bounds(
         .try_collect()
 }
 
+/// Checks all `Command`s to ashure they do not exceed the print diametions
 pub fn check_moves_bounds(moves: &[Command], settings: &Settings) -> Result<(), SlicerErrors> {
     moves
         .iter()

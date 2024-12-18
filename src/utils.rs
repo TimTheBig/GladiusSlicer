@@ -16,6 +16,7 @@ pub struct StateContext {
 }
 
 impl StateContext {
+    /// Create a new `StateContext` with the current time
     pub fn new(display_type: DisplayType) -> StateContext {
         let time = SystemTime::now();
         StateContext {

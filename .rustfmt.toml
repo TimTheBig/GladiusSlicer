@@ -3,3 +3,7 @@ tab_spaces = 4
 fn_call_width = 60
 attr_fn_like_width = 90
 use_field_init_shorthand = true
+
+# unstable options
+where_single_line = true
+normalize_comments = true
