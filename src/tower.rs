@@ -633,6 +633,34 @@ pub struct NormalVertex {
     pub z: f64,
 }
 
+impl NormalVertex {
+    // todo check
+    /// Project the 3D vertex onto a 2D plane, defined by its normal vector `PLANE_NORMAL` and an offset.
+    /// This allows the plotter to run normally.
+    pub(crate) fn project_on_plane_to_2d(self) -> Coord<f64> {
+        let plane_normal = PLANE_NORMAL.get()
+            .expect("This is initialized before this can be called in main");
+
+        // Define the offset of the plane from the origin
+        let plane_offset = 0.0;
+
+        // Calculate the scalar distance from the point to the plane
+        let distance = (plane_normal.dot(&self) + plane_offset)
+            / (plane_normal.x.powi(2) + plane_normal.y.powi(2) + plane_normal.z.powi(2)).sqrt();
+
+        // Subtract the distance along the plane normal to get the projection
+        let projected_x = self.x - distance * plane_normal.x;
+        let projected_y = self.y - distance * plane_normal.y;
+        let projected_z = self.z - distance * plane_normal.z;
+
+        // For 2D, we use the `x` and `z` coordinates (you can adjust this based on your needs)
+        Coord {
+            x: projected_x,
+            y: projected_y, // Use Z as the 2nd coordinate in the 2D system
+        }
+    }
+}
+
 impl From<Vertex> for NormalVertex {
     fn from(vert: Vertex) -> Self {
         Self { x: vert.x, y: vert.y, z: vert.z }
