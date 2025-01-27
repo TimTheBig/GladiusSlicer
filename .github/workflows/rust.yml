@@ -59,6 +59,9 @@ jobs:
       - name: Rust/Cargo Cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+
       - name: Check spelling
         run: |
           if ! which typos > /dev/null; then
