@@ -113,10 +113,41 @@ pub fn convert(
     writeln!(write_buf, "M83 ; use relative distances for extrusion")
         .map_err(|_| SlicerErrors::FileWriteError)?;
 
-    for cmd in cmds {
+    write_commands(cmds, settings, &mut current_z, &mut layer_count, &mut current_object, &write_buf)?;
+
+    let end = convert_instructions(
+        &settings.ending_instructions,
+        current_z,
+        layer_count,
+        None,
+        current_object,
+        settings,
+    )?;
+
+    writeln!(write_buf, "{end}").map_err(|_| SlicerErrors::FileWriteError)?;
+
+    write_buf
+        .flush()
+        .expect("File Closed Before CLosed. Gcode invalid.");
+
+    Ok(())
+}
+
+/// Write the `Command`s as g-code to the given buffer.
+fn write_commands(
+    cmds: &[Command],
+    settings: &Settings,
+    current_z: &mut f64,
+    layer_count: &mut u32,
+    current_object: &mut Option<usize>,
+    write_buf: &BufWriter<&mut impl Write>,
+) -> Result<(), SlicerErrors> {
+    Ok(for cmd in cmds {
         match cmd {
-            Command::MoveTo { end, .. } => writeln!(write_buf, "G1 X{:.5} Y{:.5}", end.x, end.y)
-                .map_err(|_| SlicerErrors::FileWriteError)?,
+            Command::MoveTo { end, .. } => {
+                writeln!(write_buf, "G1 X{:.5} Y{:.5}", end.x, end.y)
+                    .map_err(|_| SlicerErrors::FileWriteError)?
+            },
             Command::MoveAndExtrude {
                 start,
                 end,
@@ -133,11 +164,14 @@ pub fn convert(
                     + (std::f64::consts::PI * (thickness / 2.0) * (thickness / 2.0)))
                     * length;
                 /*let extrusion_volume = width*thickness*length;*/
+                debug_assert!(extrusion_volume > 0.0, "The volume of an extrusion must be greater then 0.");
 
                 let filament_area = (std::f64::consts::PI
                     * settings.filament.diameter
                     * settings.filament.diameter)
                     / 4.0;
+                debug_assert!(filament_area > 0.0, "The area of filament must be greater then 0.");
+
                 let extrude = extrusion_volume / filament_area;
 
                 writeln!(write_buf, "G1 X{:.5} Y{:.5} E{:.5}", end.x, end.y, extrude)
@@ -274,8 +308,8 @@ pub fn convert(
                 )
                 .map_err(|_| SlicerErrors::FileWriteError)
                 .map_err(|_| SlicerErrors::FileWriteError)?;
-                current_z = *z;
-                layer_count = *index as u32;
+                *current_z = *z;
+                *layer_count = *index as u32;
                 writeln!(write_buf, "G1 Z{:.5}", z)
                     .map_err(|_| SlicerErrors::FileWriteError)
                     .map_err(|_| SlicerErrors::FileWriteError)?;
@@ -325,6 +359,8 @@ pub fn convert(
                     / (std::f64::consts::PI
                         * settings.filament.diameter
                         * settings.filament.diameter);
+                debug_assert!(extrude > 0.0, "An extrude amount must be greater then 0.");
+
                 writeln!(
                     write_buf,
                     "{} X{:.5} Y{:.5} I{:.5} J{:.5} E{:.5}",
@@ -338,7 +374,7 @@ pub fn convert(
                 .map_err(|_| SlicerErrors::FileWriteError)?;
             }
             Command::ChangeObject { object } => {
-                let previous_object = std::mem::replace(&mut current_object, Some(*object));
+                let previous_object = std::mem::replace(current_object, Some(*object));
                 writeln!(
                     write_buf,
                     "{}",
@@ -357,24 +393,7 @@ pub fn convert(
                 panic!("Converter reached a No Action Command, Optimization Failure")
             }
         }
-    }
-
-    let end = convert_instructions(
-        &settings.ending_instructions,
-        current_z,
-        layer_count,
-        None,
-        current_object,
-        settings,
-    )?;
-
-    writeln!(write_buf, "{end}").map_err(|_| SlicerErrors::FileWriteError)?;
-
-    write_buf
-        .flush()
-        .expect("File Closed Before CLosed. Gcode invalid.");
-
-    Ok(())
+    })
 }
 
 /// Parse and evaluate g-code macros, returning a string to be into the g-code.\
@@ -433,7 +452,7 @@ fn convert_instructions(
 /// These variables allow start, layer change, and end g-code to adapt to the current print.
 /// 
 /// ## Examples
-/// ```no_run
+/// ```
 /// assert_eq!(
 ///     parse_macro("1.5+3.0", 0.0, 0, Some(1), Some(2), &Settings::default()),
 ///     Ok(String::from("4.5"))
