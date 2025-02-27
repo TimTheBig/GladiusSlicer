@@ -4,8 +4,8 @@ use gladius_shared::types::{Move, MoveChain, MoveType, PartialInfillTypes, Solid
 
 use crate::utils::point_y_lerp;
 use crate::PolygonOperations;
-use geo::prelude::*;
-use geo::{Coord, Point, Polygon};
+use geo_3d::prelude::*;
+use geo_3d::{Coord, Point, Polygon};
 
 pub fn linear_fill_polygon(
     poly: &Polygon<f64>,

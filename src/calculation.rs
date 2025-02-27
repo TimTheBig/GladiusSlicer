@@ -9,7 +9,7 @@ pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedVal
     };
 
     let mut current_speed = 0.0;
-    let mut current_pos = Coord { x: 0.0, y: 0.0 };
+    let mut current_pos = Coord { x: 0.0, y: 0.0, z: 0.0 };
 
     for cmd in moves {
         match cmd {

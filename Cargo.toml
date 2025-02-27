@@ -25,8 +25,8 @@ simple_logger = "5.0"
 log = "0.4.25"
 
 nalgebra = "0.33"
-geo = { version = "0.29", features = ["use-serde"] }
 itertools = "0.14"
+geo-3d = { version = "0.30", features = ["use-serde"], git = "https://github.com/TimTheBig/geo-3d.git" }
 geo-clipper = "0.8.0"
 geo-svg = "0.7"
 geo-offset = { version = "0.3.2", git = "https://github.com/TimTheBig/geo-offset.git" }

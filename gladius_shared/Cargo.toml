@@ -14,7 +14,7 @@ nom_stl = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
 
 serde-xml-rs = { version = "0.6", git = "https://github.com/TimTheBig/serde-xml-rs.git", package = "serde-xml-rust" }
-geo = {version = "0.29", features = ["use-serde"] }
+geo-3d = {version = "0.30", features = ["use-serde"], git = "https://github.com/TimTheBig/geo-3d.git" }
 nalgebra = "0.33"
 deser-hjson = "2.2"
 serde_json = "^1.0.85"

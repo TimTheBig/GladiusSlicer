@@ -11,8 +11,8 @@ use crate::plotter::polygon_operations::PolygonOperations;
 use crate::utils::point_lerp;
 use crate::{Object, Settings, StateChange};
 use coordinate_position::CoordPos;
-use geo::prelude::*;
-use geo::{Coord, MultiPolygon, Polygon};
+use geo_3d::prelude::*;
+use geo_3d::{Coord, MultiPolygon, Polygon};
 use gladius_shared::settings::SkirtSettings;
 use gladius_shared::types::{Command, Move, MoveChain, MoveType, RetractionType, Slice};
 use itertools::Itertools;
@@ -207,6 +207,7 @@ impl Plotter for Slice {
                 let bounded_endpoint = Coord {
                     x: end.x.max(0.0).min(settings.print_x),
                     y: end.y.max(0.0).min(settings.print_y),
+                    z: end.z.max(0.0).min(settings.print_z),
                 };
 
                 Move {
@@ -221,14 +222,12 @@ impl Plotter for Slice {
             .collect();
 
         let start_point = Coord {
-            x: offset_hull_multi.0[0].exterior()[0]
-                .x
-                .max(0.0)
+            x: offset_hull_multi.0[0].exterior()[0].x.max(0.0)
                 .min(settings.print_x),
-            y: offset_hull_multi.0[0].exterior()[0]
-                .y
-                .max(0.0)
+            y: offset_hull_multi.0[0].exterior()[0].y.max(0.0)
                 .min(settings.print_y),
+            z: offset_hull_multi.0[0].exterior()[0].z.max(0.0)
+                .min(settings.print_z),
         };
 
         self.fixed_chains.push(MoveChain {

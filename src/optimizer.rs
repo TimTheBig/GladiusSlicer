@@ -1,4 +1,4 @@
-use geo::{Coord, Distance, Euclidean, Length, Line};
+use geo_3d::{Coord, Distance, Euclidean, Length, Line};
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, RetractionType, StateChange};
 use itertools::Itertools;
@@ -143,6 +143,7 @@ pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
         .collect();
 }
 
+/// Simplafiy `SetState` commands to only be a diff from the last state
 pub fn state_optomizer(cmds: &mut Vec<Command>) {
     let mut current_state = StateChange::default();
 
@@ -255,6 +256,7 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
             center: Coord {
                 x: center.0,
                 y: center.1,
+                z: center.2,
             },
             thickness,
             width,
@@ -299,7 +301,7 @@ fn ray_ray_intersection(
         let px = (b2 - b1) / (m1 - m2); // collision x
         let py = m1 * px + b1; // collision y
 
-        Some(Coord { x: px, y: py })
+        Some(Coord { x: px, y: py, z: pz })
     } else {
         None
     }
@@ -312,54 +314,54 @@ mod tests {
     #[test]
     fn basic_line_bisector() {
         let (center, dir) = line_bisector(
-            Coord { x: 0.0, y: 0.0 },
-            Coord { x: 1.0, y: 1.0 },
-            Coord { x: 2.0, y: 0.0 },
+            Coord { x: 0.0, y: 0.0, z: 0.0 },
+            Coord { x: 1.0, y: 1.0, z: 1.0 },
+            Coord { x: 2.0, y: 0.0, z: 2.0 },
         );
 
-        assert_eq!(center, Coord { x: 1.0, y: 1.0 });
+        assert_eq!(center, Coord { x: 1.0, y: 1.0, z: 1.0 });
         assert_eq!(dir.x, 0.0);
         assert!(dir.y < 0.0);
 
         let (center, dir) = line_bisector(
-            Coord { x: 2.0, y: 0.0 },
-            Coord { x: 1.0, y: 1.0 },
-            Coord { x: 0.0, y: 0.0 },
+            Coord { x: 2.0, y: 0.0, z: 2.0 },
+            Coord { x: 1.0, y: 1.0, z: 1.0 },
+            Coord { x: 0.0, y: 0.0, z: 0.0 },
         );
 
-        assert_eq!(center, Coord { x: 1.0, y: 1.0 });
+        assert_eq!(center, Coord { x: 1.0, y: 1.0, z: 1.0 });
         assert_eq!(dir.x, 0.0);
         assert!(dir.y < 0.0);
 
         let (center, dir) = line_bisector(
-            Coord { x: 0.0, y: 0.0 },
-            Coord { x: 1.0, y: 1.0 },
-            Coord { x: -2.0, y: 4.0 },
+            Coord { x: 0.0, y: 0.0, z: 0.0 },
+            Coord { x: 1.0, y: 1.0, z: 1.0 },
+            Coord { x: -2.0, y: 4.0, z: -2.0 },
         );
 
-        assert_eq!(center, Coord { x: 1.0, y: 1.0 });
+        assert_eq!(center, Coord { x: 1.0, y: 1.0, z: 1.0 });
         assert!(dir.y - 0.0 < 0.000001);
         assert!(dir.x < 0.0);
 
         let (center, dir) = line_bisector(
-            Coord { x: 0.0, y: 0.0 },
-            Coord { x: 1.0, y: 0.0 },
-            Coord { x: 1.0, y: 1.0 },
+            Coord { x: 0.0, y: 0.0, z: 0.0 },
+            Coord { x: 1.0, y: 0.0, z: 1.0 },
+            Coord { x: 1.0, y: 1.0, z: 1.0 },
         );
 
-        assert_eq!(center, Coord { x: 1.0, y: 0.0 });
+        assert_eq!(center, Coord { x: 1.0, y: 0.0, z: 1.0 });
         assert_eq!(dir.y, -dir.x);
     }
 
     #[test]
     fn basic_ray_ray() {
         let center = ray_ray_intersection(
-            &Coord { x: 0.0, y: 0.0 },
-            &Coord { x: 1.0, y: 1.0 },
-            &Coord { x: 2.0, y: 0.0 },
-            &Coord { x: -1.0, y: 1.0 },
+            &Coord { x: 0.0, y: 0.0, z: 0.0 },
+            &Coord { x: 1.0, y: 1.0, z: 1.0 },
+            &Coord { x: 2.0, y: 0.0, z: 2.0 },
+            &Coord { x: -1.0, y: 1.0, z: -1.0 },
         );
-        assert_eq!(center, Some(Coord { x: 1.0, y: 1.0 }));
+        assert_eq!(center, Some(Coord { x: 1.0, y: 1.0, z: 1.0 }));
 
         let center = ray_ray_intersection(
             &Coord { x: 0.0, y: 3.0 },
@@ -385,7 +387,8 @@ mod tests {
                 let r = a as f64 / 100.0;
                 let x = r.cos();
                 let y = r.sin();
-                Coord { x, y }
+                let y = r.cos();
+                Coord { x, y, z }
             })
             .tuple_windows::<(Coord<f64>, Coord<f64>)>()
             .map(|(start, end)| Command::MoveAndExtrude {
@@ -407,8 +410,8 @@ mod tests {
             thickness,
             ..
         } = commands[0] {
-            assert_eq!(start, Coord { x: 1.0, y: 0.0 });
-            assert_eq!(center, Coord { x: 0.0, y: 0.0 });
+            assert_eq!(start, Coord { x: 1.0, y: 0.0, z: 1.0 });
+            assert_eq!(center, Coord { x: 0.0, y: 0.0, z: 0.0 });
             assert_eq!(width, 0.4);
             assert_eq!(thickness, 0.3);
         } else {
@@ -426,7 +429,7 @@ mod tests {
                     let r = a as f64 / 100.0;
                     let x = r.cos();
                     let y = r.sin();
-                    Coord { x, y }
+                    Coord { x, y, z }
                 })
                 .tuple_windows::<(Coord<f64>, Coord<f64>)>()
                 .map(|(start, end)| Command::MoveAndExtrude {
@@ -450,8 +453,8 @@ mod tests {
             thickness,
             ..
         } = commands[1] {
-            assert_eq!(start, Coord { x: 1.0, y: 0.0 });
-            assert_eq!(center, Coord { x: 0.0, y: 0.0 });
+            assert_eq!(start, Coord { x: 1.0, y: 0.0, z: 1.0 });
+            assert_eq!(center, Coord { x: 0.0, y: 0.0, z: 0.0 });
             assert_eq!(width, 0.4);
             assert_eq!(thickness, 0.3);
         } else {

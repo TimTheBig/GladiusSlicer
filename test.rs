@@ -1,4 +1,4 @@
-use geo::Coord;
+use geo_3d::Coord;
 
 pub trait TowerVertex: Ord + Send + Eq {
     /// Gets the z, **not** height, of the vertex

@@ -9,8 +9,8 @@ use utils::{DisplayType, StateContext};
 
 use crate::plotter::convert_objects_into_moves;
 use crate::tower::{create_towers, TriangleTower, TriangleTowerIterator};
-use geo::{
-    coordinate_position, Closest, ClosestPoint, Contains, Coord, CoordinatePosition, GeoFloat,
+use geo_3d::{
+    coordinate_position, Closest, ClosestPoint, Contains, Coord, CoordinatePosition,
     Line, MultiPolygon, Point,
 };
 use gladius_shared::settings::{PartialSettingsFile, Settings, SettingsValidationResult};

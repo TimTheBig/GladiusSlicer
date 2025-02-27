@@ -1,4 +1,4 @@
-use geo::Coord;
+use geo_3d::Coord;
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::messages::Message;
 use gladius_shared::warning::SlicerWarnings;
@@ -114,10 +114,11 @@ pub fn state_update(state_message: &str, state_context: &mut StateContext) {
 /// using y and the y of a and b to set the interpolation point.\
 /// Returns a `Coord` with the interpolated x and set y
 #[inline]
-pub const fn point_y_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64) -> Coord<f64> {
+pub const fn point_y_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64, z: f64) -> Coord<f64> {
     Coord {
         x: lerp(a.x, b.x, (y - a.y) / (b.y - a.y)),
         y,
+        z,
     }
 }
 
@@ -127,6 +128,7 @@ pub const fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
     Coord {
         x: lerp(a.x, b.x, f),
         y: lerp(a.y, b.y, f),
+        z: lerp(a.z, b.z, f),
     }
 }
 

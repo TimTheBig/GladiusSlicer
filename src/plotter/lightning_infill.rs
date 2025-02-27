@@ -1,16 +1,16 @@
 use crate::{
-    coordinate_position, Closest, ClosestPoint, Contains, Coord, CoordinatePosition, GeoFloat,
+    coordinate_position, Closest, ClosestPoint, Contains, Coord, CoordinatePosition,
     Itertools, Line, Move, MoveChain, MoveType, MultiPolygon, Point, PolygonOperations, Slice,
 };
 use rayon::prelude::{IntoParallelRefMutIterator, ParallelIterator};
 
 use coordinate_position::CoordPos;
-use geo::line_intersection::{line_intersection, LineIntersection};
-use geo::{Distance, Euclidean};
+use geo_3d::line_intersection::{line_intersection, LineIntersection};
+use geo_3d::{Distance, Euclidean};
 use gladius_shared::settings::LayerSettings;
 
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 
 pub fn lightning_infill(slices: &mut Vec<Slice>) {
     let mut lt = LightningForest { trees: vec![] };
@@ -116,7 +116,7 @@ pub fn lightning_layer(
 
     if !points.is_empty() {
         // shuffle so same distance points are random
-        points.shuffle(&mut thread_rng());
+        points.shuffle(&mut rng());
 
         points.sort_by(|a, b| {
             a.1.partial_cmp(&b.1)
@@ -216,7 +216,7 @@ impl LightningNode {
                 let newx = parent_location.x + newdx;
                 let newy = parent_location.y + newdy;
 
-                self.location = Coord { x: newx, y: newy };
+                self.location = Coord { x: newx, y: newy, z: newz };
 
                 StraightenResponse::DoNothing
             } else {
@@ -247,7 +247,7 @@ impl LightningNode {
                     let newx = midpoint.x + newdx;
                     let newy = midpoint.y + newdy;
 
-                    self.location = Coord { x: newx, y: newy };
+                    self.location = Coord { x: newx, y: newy, z: newz };
 
                     StraightenResponse::DoNothing
                 } else {
@@ -474,7 +474,7 @@ fn get_closest_intersection_point_on_polygon(
         .flat_map(|poly| {
             std::iter::once(poly.exterior())
                 .chain(poly.interiors())
-                .flat_map(geo::LineString::lines)
+                .flat_map(geo_3d::LineString::lines)
         })
         .filter_map(|poly_line| {
             line_intersection(poly_line, line).map(|intersection| match intersection {
@@ -501,7 +501,7 @@ fn closest_point_exterior_point(poly: &MultiPolygon, p: &Point<f64>) -> Closest<
 // Code sources from Geo lib
 fn closest_of<C, F, I>(iter: I, p: Point<F>) -> Closest<F>
 where
-    F: GeoFloat,
+    F: geo_3d::GeoNum,
     I: IntoIterator<Item = C>,
     C: ClosestPoint<F>,
 {

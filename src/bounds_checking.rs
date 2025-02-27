@@ -1,4 +1,4 @@
-use geo::{Contains, MultiPolygon, Point};
+use geo_3d::{Contains, MultiPolygon, Point};
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, IndexedTriangle, Vertex};
@@ -87,7 +87,7 @@ pub fn check_moves_bounds(moves: &[Command], settings: &Settings) -> Result<(), 
 #[cfg(test)]
 mod bounds_check_tests {
     use super::*;
-    use geo::{LineString, Polygon};
+    use geo_3d::{LineString, Polygon};
 
     #[test]
     fn test_slice_with_model_in_excluded_area() {

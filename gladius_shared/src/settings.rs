@@ -7,7 +7,7 @@ use crate::error::SlicerErrors;
 use crate::types::{MoveType, PartialInfillTypes, SolidInfillTypes};
 use crate::warning::SlicerWarnings;
 // for exclude area setting
-use geo::MultiPolygon;
+use geo_3d::MultiPolygon;
 use geo_validity_check::Valid;
 use gladius_proc_macros::Settings;
 use log::trace;

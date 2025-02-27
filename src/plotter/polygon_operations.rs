@@ -1,4 +1,4 @@
-use geo::{MultiPolygon, Polygon};
+use geo_3d::{MultiPolygon, Polygon};
 
 // todo remove dependency on geo clipper and by extension bindgen
 

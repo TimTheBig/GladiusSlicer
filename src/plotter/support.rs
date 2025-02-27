@@ -1,6 +1,6 @@
 use crate::plotter::support_linear_fill_polygon;
 use crate::{MoveType, PolygonOperations, Slice};
-use geo::MultiPolygon;
+use geo_3d::MultiPolygon;
 use gladius_shared::settings::SupportSettings;
 
 pub trait Supporter {

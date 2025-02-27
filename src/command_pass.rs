@@ -1,5 +1,6 @@
+use geo_3d::coord;
 use crate::optimizer::{binary_optimizer, state_optomizer, unary_optimizer};
-use crate::{Command, Coord, HashMap, Itertools, OrderedFloat, RetractionType, Settings};
+use crate::{Command, HashMap, Itertools, OrderedFloat, RetractionType, Settings};
 
 pub trait CommandPass {
     fn pass(cmds: &mut Vec<Command>, settings: &Settings);
@@ -27,11 +28,12 @@ impl CommandPass for OptimizePass {
 pub struct SlowDownLayerPass;
 
 impl CommandPass for SlowDownLayerPass {
+    // todo affect z
     fn pass(cmds: &mut Vec<Command>, settings: &Settings) {
         let mut layer_height = 0.0;
         // Slow down on small layers
         let mut current_speed = 0.0;
-        let mut current_pos = Coord { x: 0.0, y: 0.0 };
+        let mut current_pos = &coord! { x: 0.0, y: 0.0, z: 0.0 };
 
         {
             let reduction: Vec<(f64, usize, usize)> = cmds

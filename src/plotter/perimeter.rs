@@ -1,8 +1,8 @@
 use gladius_shared::settings::LayerSettings;
 use gladius_shared::types::{Move, MoveChain, MoveType};
 
-use geo::prelude::*;
-use geo::MultiPolygon;
+use geo_3d::prelude::*;
+use geo_3d::MultiPolygon;
 
 use crate::PolygonOperations;
 use itertools::Itertools;
