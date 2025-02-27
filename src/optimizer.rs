@@ -200,7 +200,7 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
                 )>()
                 .filter_map(|((pos, (p1, n1)), (_, (p2, n2)))| {
                     ray_ray_intersection(&p1, &n1, &p2, &n2)
-                        .map(|center| (pos, center.x_y(), Euclidean::distance(center, p1)))
+                        .map(|center| (pos, center.x_y(), center.distance(p1)))
                 })
             {
                 last_pos = pos;
@@ -265,8 +265,8 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
 }
 
 fn line_bisector(p0: Coord<f64>, p1: Coord<f64>, p2: Coord<f64>) -> (Coord<f64>, Coord<f64>) {
-    let l1_len = Euclidean::distance(p0, p1);
-    let l2_len = Euclidean::distance(p1, p2);
+    let l1_len = p0.distance(p1);
+    let l2_len = p1.distance(p2);
 
     let l1_unit = (p1 - p0) / -l1_len;
     let l2_unit = (p1 - p2) / -l2_len;
@@ -387,7 +387,7 @@ mod tests {
                 let r = a as f64 / 100.0;
                 let x = r.cos();
                 let y = r.sin();
-                let y = r.cos();
+                let z = r.cos();
                 Coord { x, y, z }
             })
             .tuple_windows::<(Coord<f64>, Coord<f64>)>()

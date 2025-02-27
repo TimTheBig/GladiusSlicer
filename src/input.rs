@@ -78,11 +78,11 @@ pub fn load_models(
                             ),
                             |a, b| {
                                 (
-                                    a.0.min(b.x),
-                                    a.1.max(b.x),
-                                    a.2.min(b.y),
-                                    a.3.max(b.y),
-                                    a.4.min(b.z),
+                                    a.0.min(b.0.x),
+                                    a.1.max(b.0.x),
+                                    a.2.min(b.0.y),
+                                    a.3.max(b.0.y),
+                                    a.4.min(b.0.z),
                                 )
                             },
                         );

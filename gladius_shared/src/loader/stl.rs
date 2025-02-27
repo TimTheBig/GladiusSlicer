@@ -25,11 +25,11 @@ impl Loader for STLLoader {
         let vertices = mesh
             .vertices()
             .iter()
-            .map(|vert| Vertex {
-                x: f64::from(vert[0]),
-                y: f64::from(vert[1]),
-                z: f64::from(vert[2]),
-            })
+            .map(|vert| Vertex::new(
+                f64::from(vert[0]),
+                f64::from(vert[1]),
+                f64::from(vert[2])
+            ))
             .collect::<Vec<Vertex>>();
 
         for triangle in mesh.triangles() {

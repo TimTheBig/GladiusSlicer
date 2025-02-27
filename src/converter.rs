@@ -15,9 +15,9 @@ pub fn convert(
     settings: &Settings,
     write: &mut impl Write,
 ) -> Result<(), SlicerErrors> {
-    let mut current_z = 0.0;
-    let mut layer_count = 0;
-    let mut current_object = None;
+    let current_z = 0.0;
+    let layer_count = 0;
+    let current_object = None;
     let mut write_buf = BufWriter::new(write);
 
     // Add the slicing date to the g-code
@@ -113,7 +113,8 @@ pub fn convert(
     writeln!(write_buf, "M83 ; use relative distances for extrusion")
         .map_err(|_| SlicerErrors::FileWriteError)?;
 
-    write_commands(cmds, settings, &mut current_z, &mut layer_count, &mut current_object, &write_buf)?;
+    // Convert commands
+    write_commands(cmds, settings, current_z, layer_count, current_object, &mut write_buf)?;
 
     let end = convert_instructions(
         &settings.ending_instructions,
@@ -137,10 +138,10 @@ pub fn convert(
 fn write_commands(
     cmds: &[Command],
     settings: &Settings,
-    current_z: &mut f64,
-    layer_count: &mut u32,
-    current_object: &mut Option<usize>,
-    write_buf: &BufWriter<&mut impl Write>,
+    mut current_z: f64,
+    mut layer_count: u32,
+    mut current_object: Option<usize>,
+    write_buf: &mut BufWriter<&mut impl Write>,
 ) -> Result<(), SlicerErrors> {
     Ok(for cmd in cmds {
         match cmd {
@@ -308,8 +309,8 @@ fn write_commands(
                 )
                 .map_err(|_| SlicerErrors::FileWriteError)
                 .map_err(|_| SlicerErrors::FileWriteError)?;
-                *current_z = *z;
-                *layer_count = *index as u32;
+                current_z = *z;
+                layer_count = *index as u32;
                 writeln!(write_buf, "G1 Z{:.5}", z)
                     .map_err(|_| SlicerErrors::FileWriteError)
                     .map_err(|_| SlicerErrors::FileWriteError)?;
@@ -374,7 +375,7 @@ fn write_commands(
                 .map_err(|_| SlicerErrors::FileWriteError)?;
             }
             Command::ChangeObject { object } => {
-                let previous_object = std::mem::replace(current_object, Some(*object));
+                let previous_object = std::mem::replace(&mut current_object, Some(*object));
                 writeln!(
                     write_buf,
                     "{}",

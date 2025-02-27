@@ -58,7 +58,7 @@ impl CommandPass for SlowDownLayerPass {
                                     let x_diff = end.x - current_pos.x;
                                     let y_diff = end.y - current_pos.y;
                                     let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                                    current_pos = *end;
+                                    current_pos = end;
                                     if current_speed != 0.0 {
                                         non_move_time += d / current_speed;
                                     }
@@ -72,7 +72,7 @@ impl CommandPass for SlowDownLayerPass {
                                     let x_diff = end.x - start.x;
                                     let y_diff = end.y - start.y;
                                     let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                                    current_pos = *end;
+                                    current_pos = end;
                                     *map.entry(OrderedFloat(current_speed)).or_insert(0.0) += d;
                                 }
                                 Command::SetState { new_state } => {
@@ -111,7 +111,7 @@ impl CommandPass for SlowDownLayerPass {
                                     // Once you have the central angle in radians, multiply it by the radius to get the arc length.
                                     let extrusion_length = central * radius;
 
-                                    current_pos = *end;
+                                    current_pos = end;
                                     *map.entry(OrderedFloat(current_speed)).or_insert(0.0) +=
                                         extrusion_length;
                                 }

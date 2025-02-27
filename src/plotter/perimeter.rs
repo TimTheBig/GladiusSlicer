@@ -108,7 +108,7 @@ pub fn inset_polygon_recursive(
 
     let mut full_moves = Vec::with_capacity(
         move_chains.len() +
-        move_chains.iter().fold(0, |acc, chain| acc += chain.moves.len())
+        move_chains.iter().fold(0, |acc, chain| acc + chain.moves.len())
     );
     move_chains
         .first()

@@ -1,6 +1,5 @@
-use crate::utils::{lerp, orientation, Orientation};
+use crate::utils::{orientation, point_y_lerp, Orientation};
 use geo_3d::{Coord, Polygon, SimplifyVwPreserve};
-use geo_svg::{Color, ToSvg};
 use itertools::Itertools;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -74,19 +73,19 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                 .circular_tuple_windows::<(&Coord<f64>, &Coord<f64>, &Coord<f64>)>()
                 .map(|(&next, &point, &prev)| {
                     // Identify what type of point this is
-                    let point_type = if isabove(&point, &prev) && isabove(&point, &next) {
+                    let point_type = if is_above(&point, &prev) && is_above(&point, &next) {
                         if orientation(&prev, &point, &next) != Orientation::Right {
                             PointType::Split
                         } else {
                             PointType::Start
                         }
-                    } else if !isabove(&point, &prev) && !isabove(&point, &next) {
+                    } else if !is_above(&point, &prev) && !is_above(&point, &next) {
                         if orientation(&prev, &point, &next) != Orientation::Right {
                             PointType::Merge
                         } else {
                             PointType::End
                         }
-                    } else if isabove(&point, &prev) && !isabove(&point, &next) {
+                    } else if is_above(&point, &prev) && !is_above(&point, &next) {
                         PointType::Left
                     } else {
                         PointType::Right
@@ -124,7 +123,7 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                         let right_bot =
                             section.right_chain.last().expect("Chain must have entries");
 
-                        let right_x = point_lerp(right_top, right_bot, point.pos.y).x;
+                        let right_x = point_y_lerp(right_top, right_bot, point.pos.y, point.pos.z).x;
                         point.pos.x < right_x
                     })
                     .unwrap_or(sweep_line_storage.len());
@@ -167,15 +166,7 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                         *section.right_chain.last().expect("Chain must have entries") == point.pos
                     })
                     .unwrap_or_else(|| {
-                        panic!(
-                            "right error {:?}\n {}",
-                            point,
-                            poly.to_svg()
-                                .with_stroke_width(0.01)
-                                .with_fill_color(Color::Named("red"))
-                                .with_stroke_color(Color::Rgb(200, 0, 100))
-                                .with_fill_opacity(0.7)
-                        )
+                        panic!("right error {:?}\n {:?}", point, poly)
                     });
 
                 sweep_line_storage[index].right_chain.push(point.next);
@@ -219,7 +210,7 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                     .last()
                     .expect("Chain must have entries");
 
-                let break_point = point_lerp(break_point_high, &break_point_low, point.pos.y);
+                let break_point = point_y_lerp(break_point_high, &break_point_low, point.pos.y, point.pos.z);
 
                 right_section.right_chain.push(break_point);
 
@@ -247,8 +238,8 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                         let right_bot =
                             section.right_chain.last().expect("Chain must have entries");
 
-                        let left_x = point_lerp(left_top, left_bot, point.pos.y).x;
-                        let right_x = point_lerp(right_top, right_bot, point.pos.y).x;
+                        let left_x = point_y_lerp(left_top, left_bot, point.pos.y, point.pos.z).x;
+                        let right_x = point_y_lerp(right_top, right_bot, point.pos.y, point.pos.z).x;
 
                         point.pos.x > left_x && point.pos.x < right_x
                     })
@@ -260,15 +251,13 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                     .expect("Chain must have entries");
 
                 let break_point_low = old_section
-                    .right_chain
-                    .pop()
+                    .right_chain.pop()
                     .expect("Chain must have entries");
                 let break_point_high = old_section
-                    .right_chain
-                    .last()
+                    .right_chain.last()
                     .expect("Chain must have entries");
 
-                let break_point = point_lerp(break_point_high, &break_point_low, point.pos.y);
+                let break_point = point_y_lerp(break_point_high, &break_point_low, point.pos.y, point.pos.z);
 
                 old_section.right_chain.push(break_point);
                 old_section.right_chain.push(point.pos);
@@ -286,17 +275,9 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
     completed_sections
 }
 
-fn isabove(a: &Coord<f64>, b: &Coord<f64>) -> bool {
+fn is_above(a: &Coord<f64>, b: &Coord<f64>) -> bool {
     a.y.partial_cmp(&b.y)
         .map(|cmp| cmp.then(a.x.partial_cmp(&b.x).expect("Coords should not be NAN")))
-        .expect("Coords should not be NAN")
+            .expect("Coords should not be NAN")
         == Ordering::Greater
-}
-
-#[inline]
-fn point_lerp(a: &Coord<f64>, b: &Coord<f64>, y: f64) -> Coord<f64> {
-    Coord {
-        x: lerp(a.x, b.x, (y - a.y) / (b.y - a.y)),
-        y,
-    }
 }

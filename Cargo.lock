@@ -499,16 +499,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geo-svg"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d18cb64ebf505d0a2e198693b78d8aa71651485227503c5dd23efeb2be688206"
-dependencies = [
- "geo",
- "num-traits",
-]
-
-[[package]]
 name = "geo-types"
 version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -607,7 +597,6 @@ dependencies = [
  "geo-3d",
  "geo-clipper",
  "geo-offset",
- "geo-svg",
  "gladius_shared",
  "itertools 0.14.0",
  "log",
