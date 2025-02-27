@@ -8,7 +8,7 @@ use std::io::{BufWriter, Write};
 /// The format that the slicing date is written in
 use time::format_description::well_known::Iso8601;
 
-/// Write the `Command`s as final g-code to the given buffer.\
+/// Write the `Command`s, start/end instructions and extra info as final g-code to the given buffer.\
 /// Current date, slicer version, and settings are added to the top as comments
 pub fn convert(
     cmds: &[Command],
@@ -42,15 +42,22 @@ pub fn convert(
     // Output the settings to the g-code file
     writeln!(write_buf, "; Settings:")
         .map_err(|_| SlicerErrors::FileWriteError)?;
-    for line in settings.to_strings() {
+    for line in serde_json::to_string_pretty(&settings).expect("The serde impl of settings is sound").lines() {
         writeln!(
             // lending ; to make comment
             write_buf,
-            "; {}",
+            ";\t{}",
             line
         )
         .map_err(|_| SlicerErrors::FileWriteError)?;
     }
+    // Make it easier to parse
+    writeln!(
+        // lending ; to make comment
+        write_buf,
+        ";\0"
+    )
+    .map_err(|_| SlicerErrors::FileWriteError)?;
 
     let start = convert_instructions(
         &settings.starting_instructions,
