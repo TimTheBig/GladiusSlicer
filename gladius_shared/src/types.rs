@@ -2,9 +2,9 @@
 
 use crate::error::SlicerErrors;
 use crate::settings::{LayerSettings, Settings};
-use geo::contains::Contains;
-use geo::{
-    Coord, LineString, MultiLineString, MultiPolygon, Polygon, SimplifyVw, SimplifyVwPreserve,
+use geo_3d::{Distance, contains::Contains};
+use geo_3d::{
+    coord, Coord, LineString, MultiLineString, MultiPolygon, Polygon, SimplifyVw, SimplifyVwPreserve
 };
 use itertools::Itertools;
 use nalgebra::Point3;
@@ -13,13 +13,15 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
+use std::ops::Sub;
 
 /// A single slice of an object containing it's current plotting status.
 pub struct Slice {
     /// The slice's entire polygon. Should not be modified after creation by the slicing process.
     pub main_polygon: MultiPolygon<f64>,
 
-    /// The slice's remaining area that needs to be processes. Passes will slowly subtract from this until finally infill will fill the space.
+    /// The slice's remaining area that needs to be processes.
+    /// Passes will slowly subtract from this until finally infill will fill the space.
     pub remaining_area: MultiPolygon<f64>,
 
     /// The area that will be filled by support interface material.
@@ -31,7 +33,8 @@ pub struct Slice {
     /// Theses moves ares applied in order and the start of the commands for the slice.
     pub fixed_chains: Vec<MoveChain>,
 
-    /// The move chains generaated by various passses. These chains can be reordered by the optomization process to create faster commands.
+    /// The move chains generaated by various passes.
+    /// These chains can be reordered by the optomization process to create faster commands.
     pub chains: Vec<MoveChain>,
 
     /// The lower height of this slice.
@@ -54,7 +57,7 @@ impl Slice {
         settings: &Settings,
     ) -> Self
     where
-        I: Iterator<Item = (f64, f64)>,
+        I: Iterator<Item = (f64, f64, f64)>,
     {
         let polygon = Polygon::new(LineString::from_iter(line), Vec::new());
 
@@ -194,40 +197,49 @@ impl Display for PartialInfillTypes {
 }
 
 /// A single 3D vertex
-#[derive(Default, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Default, Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename = "vertex")]
-pub struct Vertex {
-    /// X Coord
-    pub x: f64,
-
-    /// Y Coord
-    pub y: f64,
-
-    /// Z Coord
-    pub z: f64,
-}
+pub struct Vertex(pub Coord);
 
 impl Vertex {
+    /// Creates a new `Vertex` from x, y, and z components
+    pub const fn new(x: f64, y: f64, z: f64) -> Self {
+        Vertex(coord!(x, y, z))
+    }
+
     /// mul with transform in place
     pub fn mul_transform(&mut self, transform: &Transform) {
-        self.x = transform.0[0][0] * self.x
-            + transform.0[0][1] * self.y
-            + transform.0[0][2] * self.z
+        self.0.x = transform.0[0][0] * self.0.x
+            + transform.0[0][1] * self.0.y
+            + transform.0[0][2] * self.0.z
             + transform.0[0][3];
-        self.y = transform.0[1][0] * self.x
-            + transform.0[1][1] * self.y
-            + transform.0[1][2] * self.z
+        self.0.y = transform.0[1][0] * self.0.x
+            + transform.0[1][1] * self.0.y
+            + transform.0[1][2] * self.0.z
             + transform.0[1][3];
-        self.z = transform.0[2][0] * self.x
-            + transform.0[2][1] * self.y
-            + transform.0[2][2] * self.z
+        self.0.z = transform.0[2][0] * self.0.x
+            + transform.0[2][1] * self.0.y
+            + transform.0[2][2] * self.0.z
             + transform.0[2][3];
+    }
+
+    /// Calculate the minimum distance between two verices
+    pub fn distance(self, destination: Self) -> f64 {
+        self.0.distance(destination.0)
+    }
+}
+
+impl Sub<Vertex> for Vertex {
+    type Output = Self;
+
+    fn sub(self, rhs: Vertex) -> Self::Output {
+        Vertex(self.0 - rhs.0)
     }
 }
 
 impl From<Vertex> for Point3<f64> {
     fn from(v: Vertex) -> Self {
-        Point3::new(v.x, v.y, v.z)
+        Point3::new(v.0.x, v.0.y, v.0.z)
     }
 }
 
@@ -235,12 +247,12 @@ impl Eq for Vertex {}
 
 impl Ord for Vertex {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.z != other.z {
-            self.z.partial_cmp(&other.z).expect("Non-NAN")
-        } else if self.y != other.y {
-            self.y.partial_cmp(&other.y).expect("Non-NAN")
+        if self.0.z != other.0.z {
+            self.0.z.partial_cmp(&other.0.z).expect("Non-NAN")
+        } else if self.0.y != other.0.y {
+            self.0.y.partial_cmp(&other.0.y).expect("Non-NAN")
         } else {
-            self.x.partial_cmp(&other.x).expect("Non-NAN")
+            self.0.x.partial_cmp(&other.0.x).expect("Non-NAN")
         }
     }
 }
@@ -376,6 +388,7 @@ pub enum Command {
         /// The end point of the move
         end: Coord<f64>,
     },
+
     /// Move to a location while extruding plastic
     MoveAndExtrude {
         /// Start point of the move
@@ -438,7 +451,9 @@ pub enum Command {
         /// The index of the new object being changed to
         object: usize,
     },
-    /// Used in optimization , should be optimized out
+
+    // todo add aserttion before conversion to make sure they are all gone
+    /// Used in optimization, should be optimized out
     NoAction,
 }
 
@@ -734,12 +749,12 @@ impl MoveChain {
             }
 
             if current_type == Some(MoveType::Travel) {
-                cmds.push(Command::MoveTo { end: m.end });
+                cmds.push(Command::MoveTo { end: m.end.clone() });
                 current_loc = m.end;
             } else {
                 cmds.push(Command::MoveAndExtrude {
                     start: current_loc,
-                    end: m.end,
+                    end: m.end.clone(),
                     thickness,
                     width: m.width,
                 });

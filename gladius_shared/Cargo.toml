@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 json_schema_gen = ["dep:schemars"]
+doc_constants = ["dep:documented"]
 
 [dependencies]
 zip = { version = "2.2.0", features = ["bzip2", "deflate", "deflate64", "lzma", "time", "xz", "zstd"], default-features = false }
@@ -24,6 +25,7 @@ gladius_proc_macros = { path = "./gladius_proc_macros" }
 geo-validity-check = { version = "0.1.1", git = "https://github.com/TimTheBig/geo-validity-check.git" }
 
 log = "0.4.25"
+documented = { version = "0.9", optional = true }
 
 # json schema gen
 [dependencies.schemars]
