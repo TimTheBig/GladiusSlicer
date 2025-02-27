@@ -8,6 +8,8 @@ use rayon::{
 };
 use std::fmt::Debug;
 
+/// ## Slice Towers
+/// Turn each tower into an [`Object`], a collection of slices, ready to be plotted.
 pub fn slice<V>(
     towers: Vec<TriangleTower<V>>,
     settings: &Settings,

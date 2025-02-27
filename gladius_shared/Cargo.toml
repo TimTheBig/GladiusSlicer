@@ -9,7 +9,7 @@ json_schema_gen = ["dep:schemars"]
 doc_constants = ["dep:documented"]
 
 [dependencies]
-zip = { version = "2.2.0", features = ["bzip2", "deflate", "deflate64", "lzma", "time", "xz", "zstd"], default-features = false }
+zip = { version = "2.2.2", features = ["bzip2", "deflate", "deflate64", "lzma", "time", "xz", "zstd"], default-features = false }
 
 nom_stl = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }

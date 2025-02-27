@@ -53,6 +53,16 @@ mod utils;
 #[cfg(test)]
 mod test;
 
+/// The `Vertex` that defines the slicing plane, to perject another `Vertex` you take the dot product of it with this.
+/// 
+/// ## Example
+/// ```
+/// use gladius_slicer::tower::NormalVertex;
+/// use gladius_slicer::PLANE_NORMAL;
+/// 
+/// let vert = NormalVertex { x: 0.5, y: 0.5, z: 1.0 };
+/// vert.dot(PLANE_NORMAL);
+/// ```
 pub static PLANE_NORMAL: std::sync::OnceLock<Vertex> = std::sync::OnceLock::new();
 
 #[derive(Parser)]
@@ -109,7 +119,6 @@ fn main() {
     // export json schema for settings
     Settings::gen_schema(Path::new("settings/")).expect("The programme should exit if this fails");
 
-    // The YAML file is found relative to the current file, similar to how modules are found
     let args: Args = Args::parse();
 
     // set number of cores for rayon
@@ -128,8 +137,7 @@ fn main() {
 
     if !args.message {
         // Vary the output based on how many times the user used the "verbose" flag
-        // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-
+        // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v')
         SimpleLogger::new()
             .with_level(match args.verbose {
                 0 => LevelFilter::Error,

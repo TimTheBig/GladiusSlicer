@@ -1,5 +1,5 @@
 name: Gladius Slicer
-version: "0.1.0"
+version: "0.4.1"
 author: Lucas Ince <lucasince@gmail.com>
 about: Slices 3D Models
 args:
