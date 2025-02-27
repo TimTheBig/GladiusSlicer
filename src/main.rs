@@ -1,4 +1,4 @@
-#![deny(clippy::unwrap_used)]
+#![deny(clippy::unwrap_used, unused)]
 #![warn(clippy::all, clippy::perf, clippy::missing_const_for_fn)]
 
 use clap::Parser;

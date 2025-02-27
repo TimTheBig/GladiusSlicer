@@ -3,7 +3,7 @@
 use crate::{Command, Settings};
 /// For g-code macro math and variables
 use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMapContext};
-use gladius_shared::{error::SlicerErrors, settings::SettingsPrint, types::RetractionType};
+use gladius_shared::{error::SlicerErrors, types::RetractionType};
 use std::io::{BufWriter, Write};
 /// The format that the slicing date is written in
 use time::format_description::well_known::Iso8601;
