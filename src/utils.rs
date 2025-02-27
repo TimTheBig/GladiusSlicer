@@ -156,7 +156,7 @@ pub fn directional_unit_bisector_left(
     match orientation(p0, p1, p2) {
         Orientation::Linear => {
             let perp = Vector2::new(-v1.y, v1.x).normalize();
-            match orientation(p0, p1, &Coord::from((p1.x + perp.x, p1.y + perp.y))) {
+            match orientation(p0, p1, &Coord::from((p1.x + perp.x, p1.y + perp.y, 0.0))) {
                 Orientation::Linear => {
                     unreachable!()
                 }
@@ -197,51 +197,51 @@ mod tests {
     fn basic_directional_unit_bisector() {
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((0.0, 0.0)),
-                &Coord::from((1.0, 0.0)),
-                &Coord::from((1.0, 1.0))
+                &Coord::from((0.0, 0.0, 0.0)),
+                &Coord::from((1.0, 0.0, -1.0)),
+                &Coord::from((1.0, 1.0, 1.0))
             ),
             Vector2::new(-1.0, 1.0).normalize()
         );
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((1.0, 1.0)),
-                &Coord::from((1.0, 0.0)),
-                &Coord::from((0.0, 0.0))
+                &Coord::from((1.0, 1.0, 1.0)),
+                &Coord::from((1.0, 0.0, -1.0)),
+                &Coord::from((0.0, 0.0, 0.0))
             ),
             Vector2::new(1.0, -1.0).normalize()
         );
 
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((0.0, 0.0)),
-                &Coord::from((1.0, 0.0)),
-                &Coord::from((2.0, 0.0))
+                &Coord::from((0.0, 0.0, 0.0)),
+                &Coord::from((1.0, 0.0, -1.0)),
+                &Coord::from((2.0, 0.0, -2.0))
             ),
             Vector2::new(0.0, 1.0)
         );
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((2.0, 0.0)),
-                &Coord::from((1.0, 0.0)),
-                &Coord::from((0.0, 0.0))
+                &Coord::from((2.0, 0.0, -2.0)),
+                &Coord::from((1.0, 0.0, -1.0)),
+                &Coord::from((0.0, 0.0, 0.0))
             ),
             Vector2::new(0.0, -1.0)
         );
 
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((0.0, 0.0)),
-                &Coord::from((0.0, 1.0)),
-                &Coord::from((0.0, 1.0))
+                &Coord::from((0.0, 0.0, 0.0)),
+                &Coord::from((0.0, 1.0, 0.0)),
+                &Coord::from((0.0, 1.0, 0.0))
             ),
             Vector2::new(-1.0, 0.0)
         );
         assert_eq!(
             directional_unit_bisector_left(
-                &Coord::from((0.0, 2.0)),
-                &Coord::from((0.0, 1.0)),
-                &Coord::from((0.0, 0.0))
+                &Coord::from((0.0, 2.0, 0.0)),
+                &Coord::from((0.0, 1.0, 0.0)),
+                &Coord::from((0.0, 0.0, 0.0))
             ),
             Vector2::new(1.0, 0.0)
         );

@@ -27,12 +27,12 @@ use std::hash::{Hash, Hasher};
 /// * `v_end` - Ending point of the line
 #[inline]
 fn line_z_intersection(z: f64, v_start: &Vertex, v_end: &Vertex) -> Vertex {
-    let z_normal = (z - v_start.z) / (v_end.z - v_start.z);
+    let z_normal = (z - v_start.0.z) / (v_end.0.z - v_start.0.z);
     debug_assert!(z_normal <= 1.0);
 
-    let y = lerp(v_start.y, v_end.y, z_normal);
-    let x = lerp(v_start.x, v_end.x, z_normal);
-    Vertex { x, y, z }
+    let y = lerp(v_start.0.y, v_end.0.y, z_normal);
+    let x = lerp(v_start.0.x, v_end.0.x, z_normal);
+    Vertex::new(x, y, z)
 }
 
 /// Calculate the **vertex**, the Line from `v_start` to `v_end` where
@@ -296,18 +296,12 @@ impl Ord for TowerRingElement {
                 },
             ) => s_triangle_index.cmp(o_triangle_index),
             (
-                TowerRingElement::Face { triangle_index },
-                TowerRingElement::Edge {
-                    start_index,
-                    end_index,
-                },
+                TowerRingElement::Face { .. },
+                TowerRingElement::Edge { .. },
             ) => std::cmp::Ordering::Greater,
             (
-                TowerRingElement::Edge {
-                    start_index,
-                    end_index,
-                },
-                TowerRingElement::Face { triangle_index },
+                TowerRingElement::Edge { .. },
+                TowerRingElement::Face { .. },
             ) => std::cmp::Ordering::Less,
             (
                 TowerRingElement::Edge {
@@ -526,7 +520,7 @@ where V: Clone + TowerVertex {
         .collect()
 }
 
-// todo add tests
+// todo add genaric tests, is that a good idea?
 pub trait TowerVertex: Ord + Send + Eq + From<Vertex> {
     /// Convert from vertex to this type
     #[inline]
@@ -566,23 +560,23 @@ pub fn angle_to_normal(slice_angle: f64) -> Vertex {
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
 
     #[cfg(debug_assertions)]
-    debug!("plane_normal: {:?}", Vertex {
-        x: slice_angle_radians.sin(),
-        y: 0.0,
-        z: slice_angle_radians.cos(),
-    });
+    debug!("plane_normal: {:?}", Vertex::new(
+        slice_angle_radians.sin(),
+        0.0,
+        slice_angle_radians.cos(),
+    ));
 
     // Calculate the normal vector based on the angle
     // In XZ plane mode switch x and z then z and y
     // plane_normal
-    Vertex {
+    Vertex::new(
         // 0.0 when angle is zero, 0.7071067812 when angle is 45.0
-        x: slice_angle_radians.sin(),
+        slice_angle_radians.sin(),
         // not involved in angled slicing
-        y: 0.0,
+        0.0,
         // 1.0 when angle is zero, so dot product is z, 0.7071067812 when angle is 45.0
-        z: slice_angle_radians.cos(),
-    }
+        slice_angle_radians.cos(),
+    )
 }
 
 impl TowerVertex for Vertex {
@@ -593,12 +587,12 @@ impl TowerVertex for Vertex {
     }
 
     fn get_z(&self) -> f64 {
-        self.z
+        self.0.z
     }
 
     fn get_height(&self) -> f64 {
         // height is just Z position
-        self.z
+        self.0.z
     }
 
     #[inline]
@@ -610,13 +604,13 @@ impl TowerVertex for Vertex {
     #[inline]
     fn get_slice_x(&self) -> f64 {
         // slice just uses x position
-        self.x
+        self.0.x
     }
 
     #[inline]
     fn get_slice_y(&self) -> f64 {
         // slice just uses y position
-        self.y
+        self.0.y
     }
 }
 
@@ -633,37 +627,9 @@ pub struct NormalVertex {
     pub z: f64,
 }
 
-impl NormalVertex {
-    // todo check
-    /// Project the 3D vertex onto a 2D plane, defined by its normal vector `PLANE_NORMAL` and an offset.
-    /// This allows the plotter to run normally.
-    pub(crate) fn project_on_plane_to_2d(self) -> Coord<f64> {
-        let plane_normal = PLANE_NORMAL.get()
-            .expect("This is initialized before this can be called in main");
-
-        // Define the offset of the plane from the origin
-        let plane_offset = 0.0;
-
-        // Calculate the scalar distance from the point to the plane
-        let distance = (plane_normal.dot(&self) + plane_offset)
-            / (plane_normal.x.powi(2) + plane_normal.y.powi(2) + plane_normal.z.powi(2)).sqrt();
-
-        // Subtract the distance along the plane normal to get the projection
-        let projected_x = self.x - distance * plane_normal.x;
-        let projected_y = self.y - distance * plane_normal.y;
-        let projected_z = self.z - distance * plane_normal.z;
-
-        // For 2D, we use the `x` and `z` coordinates (you can adjust this based on your needs)
-        Coord {
-            x: projected_x,
-            y: projected_y, // Use Z as the 2nd coordinate in the 2D system
-        }
-    }
-}
-
 impl From<Vertex> for NormalVertex {
     fn from(vert: Vertex) -> Self {
-        Self { x: vert.x, y: vert.y, z: vert.z }
+        Self { x: vert.0.x, y: vert.0.y, z: vert.0.z }
     }
 }
 
@@ -675,12 +641,12 @@ impl Ord for NormalVertex {
         let normal = PLANE_NORMAL.get()
             .expect("This is initialized before this can be called in main");
 
-        let c = self.dot(normal)
+        let projected_cmp = self.dot(normal)
             .partial_cmp(&other.dot(normal))
             .expect("Non-NAN");
 
-        if c != std::cmp::Ordering::Equal {
-            c
+        if projected_cmp != std::cmp::Ordering::Equal {
+            projected_cmp
         } else if self.z != other.z {
             self.z.partial_cmp(&other.z).expect("Non-NAN")
         } else if self.y != other.y {
@@ -703,8 +669,7 @@ impl TowerVertex for NormalVertex {
     }
 
     fn get_height(&self) -> f64 {
-        // height is just Z position
-        // self.z
+        // height is the Z position perjected on to the plane normal
         self.dot(
             PLANE_NORMAL.get()
                 .expect("This is initialized before this can be called in main"),
@@ -1113,24 +1078,25 @@ mod tests {
                 return;
             }
 
-            if lhs.elements.len() != rhs.elements.len() {
-                panic!("ASSERT ring {} and {} are different", lhs, rhs);
-            }
+            assert!(
+                lhs.elements.len() != rhs.elements.len(),
+                "ASSERT ring {} and {} are different lengths", lhs, rhs,
+            );
         }
     }
 
     #[test]
     fn test_angle_to_normal() {
         // Test that perjecting on 0° returns z
-        let ver0_deg = Vertex { x: 0.0, y: 0.0, z: 1.0 };
-        assert_eq!(ver0_deg.dot(&angle_to_normal(0.0)), ver0_deg.z);
-        let ver1_deg = Vertex { x: 0.0, y: 0.0, z: rand::random() };
-        assert_eq!(ver1_deg.dot(&angle_to_normal(0.0)), ver1_deg.z);
+        let ver0_deg = Vertex::new(0.0, 0.0, 1.0);
+        assert_eq!(ver0_deg.dot(&angle_to_normal(0.0)), ver0_deg.0.z);
+        let ver1_deg = Vertex::new(0.0, 0.0, rand::random());
+        assert_eq!(ver1_deg.dot(&angle_to_normal(0.0)), ver1_deg.0.z);
 
         // Test that perjecting on 45° returns a diffarent value
-        let ver0_45deg = Vertex { x: 0.0, y: 0.0, z: 1.0 };
-        assert_ne!(ver0_45deg.dot(&angle_to_normal(45.0)), ver0_45deg.z.cos());
-        let ver1_45deg = Vertex { x: 0.0, y: 0.0, z: rand::random() };
-        assert_ne!(ver1_45deg.dot(&angle_to_normal(45.0)), ver1_45deg.z);
+        let ver0_45deg = Vertex::new(0.0, 0.0, 1.0);
+        assert_ne!(ver0_45deg.dot(&angle_to_normal(45.0)), ver0_45deg.dot(&angle_to_normal(0.0)));
+        let ver1_45deg = Vertex::new(0.0, 0.0, rand::random());
+        assert_ne!(ver1_45deg.dot(&angle_to_normal(45.0)), ver1_45deg.0.z);
     }
 }
