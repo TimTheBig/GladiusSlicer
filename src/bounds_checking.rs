@@ -1,4 +1,4 @@
-use geo_3d::{Contains, MultiPolygon, Point};
+use geo_3d::{contains::ContainsXY, MultiPolygon, Point};
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, IndexedTriangle, Vertex};
@@ -10,8 +10,8 @@ fn check_excluded(
     bed_exclude_areas: &Option<MultiPolygon>,
 ) -> Result<(), SlicerErrors> {
     for polygon in bed_exclude_areas.as_ref() {
-        if polygon.contains(&v_point) {
-            return Err(SlicerErrors::InExcludeArea(polygon.to_owned()));
+        if polygon.contains_2d(&v_point) {
+            return Err(SlicerErrors::InExcludeArea(polygon.clone()));
         }
     }
 
@@ -33,14 +33,14 @@ pub fn check_model_bounds(
         .flat_map(|model| model.0.iter())
         .map(|v| {
             // Check if the point is in an excluded area
-            check_excluded(Point::new(v.x, v.y), &settings.bed_exclude_areas)?;
+            check_excluded(Point::from(v.0), &settings.bed_exclude_areas)?;
 
-            if v.x < total_offset
-                || v.y < total_offset
-                || v.z < -0.00001
-                || v.x > settings.print_x - total_offset
-                || v.y > settings.print_y - total_offset
-                || v.z > settings.print_z
+            if v.0.x < total_offset
+                || v.0.y < total_offset
+                || v.0.z < -0.00001
+                || v.0.x > settings.print_x - total_offset
+                || v.0.y > settings.print_y - total_offset
+                || v.0.z > settings.print_z
             {
                 Err(SlicerErrors::ModelOutsideBuildArea)
             } else {
@@ -60,6 +60,8 @@ pub fn check_moves_bounds(moves: &[Command], settings: &Settings) -> Result<(), 
                     || end.x > settings.print_x
                     || end.y < 0.0
                     || end.y > settings.print_y
+                    || end.z < 0.0
+                    || end.z > settings.print_z
                 {
                     Err(SlicerErrors::MovesOutsideBuildArea)
                 } else {
@@ -94,7 +96,7 @@ mod bounds_check_tests {
         check_excluded(
             Point::new(30.1, 58.6),
             &Some(MultiPolygon::new(vec![Polygon::new(
-                LineString::from(vec![(0.0, 0.0), (256.0, 0.0), (256.0, 256.0), (0.0, 256.0)]),
+                LineString::from(vec![(0.0, 0.0, 0.0), (256.0, 0.0), (256.0, 256.0), (0.0, 256.0)]),
                 Vec::new(),
             )])),
         )

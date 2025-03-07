@@ -200,8 +200,7 @@ impl Plotter for Slice {
 
         let moves = offset_hull_multi.0[0]
             .exterior()
-            .0
-            .iter()
+            .0.iter()
             .circular_tuple_windows::<(_, _)>()
             .map(|(&_start, &end)| {
                 let bounded_endpoint = Coord {

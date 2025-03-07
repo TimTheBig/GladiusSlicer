@@ -77,6 +77,7 @@ impl ObjectPass for SkirtPass {
         // Handle Perimeters
         if let Some(skirt) = &settings.skirt {
             state_update("Generating Moves: Skirt", state_context);
+            // Get the convex hull of the skirt layers
             let convex_hull = objects
                 .iter()
                 .flat_map(|object| {
