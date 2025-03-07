@@ -7,8 +7,7 @@ use crate::error::SlicerErrors;
 use crate::types::{MoveType, PartialInfillTypes, SolidInfillTypes};
 use crate::warning::SlicerWarnings;
 // for exclude area setting
-use geo_3d::MultiPolygon;
-use geo_validity_check::Valid;
+use geo_3d::{MultiPolygon, Validation};
 use gladius_proc_macros::Settings;
 use log::trace;
 #[cfg(feature = "json_schema_gen")]
@@ -71,7 +70,7 @@ macro_rules! option_setting_less_than_zero {
 
 /// A complete settings file for the entire slicer.
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::Documented, documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::Documented, documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug)]
 pub struct Settings {
     #[cfg_attr(feature = "json_schema_gen", schemars(example = "0.2"))]
@@ -521,15 +520,15 @@ impl Settings {
         setting_less_than_zero!(self, minimum_feedrate_print);
         setting_less_than_zero!(self, minimum_retract_distance);
 
-        // if let Some(exclude_area) = self.bed_exclude_areas.as_ref() {
-        //     // If it fails its likely failing due to the polygon not being complete
-        //     // The first and last points must be the same to be complete
-        //     if let Some(reason) = exclude_area.explain_invalidity() {
-        //         return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(
-        //             format!("{}", reason),
-        //         ));
-        //     }
-        // }
+        if let Some(exclude_area) = self.bed_exclude_areas.as_ref() {
+            // If it fails its likely failing due to the polygon not being complete
+            // The first and last points must be the same to be complete
+            if let Err(reason) = exclude_area.check_validation() {
+                return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(
+                    format!("{}", reason),
+                ));
+            }
+        }
 
         if self.layer_height < self.nozzle_diameter * 0.2 {
             return SettingsValidationResult::Warning(SlicerWarnings::LayerSizeTooLow {
@@ -738,7 +737,7 @@ pub struct LayerSettings {
 
 /// A set of values for different movement types
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct MovementParameter {
     /// Value for interior (perimeters that are inside the model
@@ -792,7 +791,7 @@ impl MovementParameter {
 
 /// Settings for a filament
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct FilamentSettings {
     /// Diameter of this filament in mm
@@ -813,7 +812,7 @@ pub struct FilamentSettings {
 
 /// Settings for the fans
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct FanSettings {
     #[cfg_attr(feature = "json_schema_gen", validate(range(max = 100.0)))]
@@ -855,7 +854,7 @@ impl Default for FanSettings {
 
 /// Support settings
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct SupportSettings {
     /// Angle to start production supports in degrees
@@ -867,7 +866,7 @@ pub struct SupportSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct SkirtSettings {
     /// the number of layer to generate the skirt
@@ -879,7 +878,7 @@ pub struct SkirtSettings {
 
 /// The Settings for Skirt generation
 #[cfg_attr(feature = "json_schema_gen", derive(JsonSchema))]
-#[cfg_attr(feature = "doc_constents", derive(documented::DocumentedFields))]
+#[cfg_attr(feature = "doc_constants", derive(documented::DocumentedFields))]
 #[derive(Settings, Serialize, Deserialize, Debug, Clone)]
 pub struct RetractionWipeSettings {
     /// The speed the retract wipe move
