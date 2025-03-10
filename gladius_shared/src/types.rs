@@ -452,7 +452,6 @@ pub enum Command {
         object: usize,
     },
 
-    // todo add aserttion before conversion to make sure they are all gone
     /// Used in optimization, should be optimized out
     NoAction,
 }

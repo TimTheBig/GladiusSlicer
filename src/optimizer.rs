@@ -364,20 +364,20 @@ mod tests {
         assert_eq!(center, Some(Coord { x: 1.0, y: 1.0, z: 1.0 }));
 
         let center = ray_ray_intersection(
-            &Coord { x: 0.0, y: 3.0 },
-            &Coord { x: 5.0, y: 1.0 },
-            &Coord { x: 2.0, y: 0.0 },
-            &Coord { x: 3.0, y: 4.0 },
+            &Coord { x: 0.0, y: 3.0, z: 0.0 },
+            &Coord { x: 5.0, y: 1.0, z: 0.0 },
+            &Coord { x: 2.0, y: 0.0, z: 0.0 },
+            &Coord { x: 3.0, y: 4.0, z: 0.0 },
         );
-        assert_eq!(center, Some(Coord { x: 5.0, y: 4.0 }));
+        assert_eq!(center, Some(Coord { x: 5.0, y: 4.0, z: 0.0 }));
 
         let center = ray_ray_intersection(
-            &Coord { x: 1.0, y: 3.0 },
-            &Coord { x: 0.10, y: -0.20 },
-            &Coord { x: 0.0, y: -2.0 },
-            &Coord { x: 2.0, y: 3.0 },
+            &Coord { x: 1.0, y: 3.0, z: 0.0 },
+            &Coord { x: 0.10, y: -0.20, z: 0.0 },
+            &Coord { x: 0.0, y: -2.0, z: 0.0 },
+            &Coord { x: 2.0, y: 3.0, z: 0.0 },
         );
-        assert_eq!(center, Some(Coord { x: 2.0, y: 1.0 }));
+        assert_eq!(center, Some(Coord { x: 2.0, y: 1.0, z: 0.0 }));
     }
 
     #[test]
@@ -429,6 +429,7 @@ mod tests {
                     let r = a as f64 / 100.0;
                     let x = r.cos();
                     let y = r.sin();
+                    let z = r.tan();
                     Coord { x, y, z }
                 })
                 .tuple_windows::<(Coord<f64>, Coord<f64>)>()

@@ -94,8 +94,8 @@ pub fn load_models(
                 }
             };
 
-            let trans_str =
-                serde_json::to_string(&transform).map_err(|_| SlicerErrors::InputMisformat)?;
+            let trans_str = serde_json::to_string(&transform)
+                .map_err(|_| SlicerErrors::InputMisformat)?;
 
             debug!("Using Transform {}", trans_str);
 
@@ -122,10 +122,11 @@ pub fn load_settings(
     filepath: Option<&str>,
     settings_data: &str,
 ) -> Result<Settings, SlicerErrors> {
-    let partial_settings: PartialSettingsFile =
-        deser_hjson::from_str(settings_data).map_err(|_| SlicerErrors::SettingsFileMisformat {
+    let partial_settings: PartialSettingsFile = deser_hjson::from_str(settings_data)
+        .map_err(|_| SlicerErrors::SettingsFileMisformat {
             filepath: filepath.unwrap_or("Command Line Argument").to_string(),
         })?;
+
     let current_path = std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
     let path = if let Some(fp) = filepath {
         let mut path = PathBuf::from_str(fp).map_err(|_| SlicerErrors::SettingsFileNotFound {
@@ -138,5 +139,5 @@ pub fn load_settings(
     };
 
     // settings
-    partial_settings.get_settings(path)
+    partial_settings.get_settings(&path)
 }

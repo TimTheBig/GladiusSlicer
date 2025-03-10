@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 
 use std::fmt::Display;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::SlicerErrors;
 use crate::types::{MoveType, PartialInfillTypes, SolidInfillTypes};
@@ -906,12 +906,12 @@ pub struct PartialSettingsFile {
 impl PartialSettingsFile {
     /// Convert a partial settings file into a complete settings file
     /// returns an error if a settings is not present in this or any sub file
-    pub fn get_settings(mut self, path: PathBuf) -> Result<Settings, SlicerErrors> {
-        let current_path =
-            std::env::current_dir().map_err(|_| SlicerErrors::SettingsFilePermission)?;
+    pub fn get_settings(mut self, path: &Path) -> Result<Settings, SlicerErrors> {
+        let current_path = std::env::current_dir()
+            .map_err(|_| SlicerErrors::SettingsFilePermission)?;
 
         // set the directory to the current directory
-        std::env::set_current_dir(&path).expect("Path checked before");
+        std::env::set_current_dir(path).expect("Path checked before");
         trace!("Setting path to {:?}", path);
 
         self.combine_with_other_files()?;

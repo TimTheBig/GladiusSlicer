@@ -55,7 +55,6 @@ where V: Sync + Clone + TowerVertex + Debug {
                             .map(|verts| {
                                 verts
                                     .iter()
-                                    // todo extract into function and make perjected version
                                     .map(|v| Coord {
                                         x: v.get_slice_x(),
                                         y: v.get_slice_y(),

@@ -94,18 +94,18 @@ mod bounds_check_tests {
     #[test]
     fn test_slice_with_model_in_excluded_area() {
         check_excluded(
-            Point::new(30.1, 58.6),
+            Point::new(30.1, 58.6, 0.0),
             &Some(MultiPolygon::new(vec![Polygon::new(
-                LineString::from(vec![(0.0, 0.0, 0.0), (256.0, 0.0), (256.0, 256.0), (0.0, 256.0)]),
+                LineString::from(vec![(0.0, 0.0, 0.0), (256.0, 0.0, 0.0), (256.0, 256.0, 256.0), (0.0, 256.0, 0.0)]),
                 Vec::new(),
             )])),
         )
         .unwrap_err();
 
         check_excluded(
-            Point::new(5.7, 8.4),
+            Point::new(5.7, 8.4, 35.0),
             &Some(MultiPolygon::new(vec![Polygon::new(
-                LineString::from(vec![(0.0, 0.0), (2.0, 0.0), (6.0, 5.0), (0.0, 2.0)]),
+                LineString::from(vec![(0.0, 0.0, 0.0), (2.0, 0.0, 2.0), (6.0, 5.0, 6.0), (0.0, 2.0, 0.0)]),
                 Vec::new(),
             )])),
         )

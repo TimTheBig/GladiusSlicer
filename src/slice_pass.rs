@@ -87,7 +87,7 @@ impl ObjectPass for SkirtPass {
                         .take(skirt.layers as usize)
                         .map(|m| m.main_polygon.union_with(&m.get_support_polygon()))
                 })
-                .fold(MultiPolygon(vec![]), |a, b| a.union_with(&b))
+                .fold(MultiPolygon(Vec::new()), |a, b| a.union_with(&b))
                 .convex_hull().expect("This was valid before");
 
             // Add to first object
