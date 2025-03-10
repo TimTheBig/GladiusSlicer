@@ -1,6 +1,7 @@
 #![deny(clippy::unwrap_used, unused)]
 #![warn(clippy::all, clippy::perf, clippy::missing_const_for_fn)]
 
+use bincode::config::standard as bincode_config;
 use clap::Parser;
 use gladius_shared::loader::{Loader, STLLoader, ThreeMFLoader};
 use gladius_shared::types::*;
@@ -220,7 +221,7 @@ fn main() {
 
     if let DisplayType::Message = state_context.display_type {
         let message = Message::Commands(moves.clone());
-        bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
+        bincode::serde::encode_into_std_write(&message, &mut BufWriter::new(std::io::stdout()), bincode_config())
             .expect("Write Limit should not be hit");
     }
     state_update("Calculate Values", &mut state_context);
@@ -257,7 +258,7 @@ fn main() {
                     String::from_utf8(gcode)
                         .expect("All write occur from write macro so should be utf-8"),
                 );
-                bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
+                bincode::serde::encode_into_std_write(&message, &mut BufWriter::new(std::io::stdout()), bincode_config())
                     .expect("Write Limit should not be hit");
             }
             DisplayType::StdOut => {
@@ -285,7 +286,7 @@ fn print_info_message(state_context: &StateContext, moves: &[Command], settings:
     match state_context.display_type {
         DisplayType::Message => {
             let message = Message::CalculatedValues(cv);
-            bincode::serialize_into(BufWriter::new(std::io::stdout()), &message)
+            bincode::serde::encode_into_std_write(&message, &mut BufWriter::new(std::io::stdout()), bincode_config())
                 .expect("Write Limit should not be hit");
         }
         DisplayType::StdOut => {
@@ -379,7 +380,7 @@ fn handle_err_or_return<T>(res: Result<T, SlicerErrors>, state_context: &StateCo
     }
 }
 
-/// Sends an apropreate error/warning message for a `SettingsValidationResult`
+/// Sends an appropriate error/warning message for a `SettingsValidationResult`
 fn handle_setting_validation(res: SettingsValidationResult, state_context: &StateContext) {
     match res {
         SettingsValidationResult::NoIssue => {}

@@ -1,3 +1,4 @@
+use bincode::config::standard as bincode_config;
 use geo_3d::Coord;
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::messages::Message;
@@ -68,7 +69,8 @@ pub fn send_error_message(error: SlicerErrors) {
     let mut stdio_lock = stdout.lock();
 
     let message = Message::Error(error);
-    bincode::serialize_into(&mut stdio_lock, &message).expect("Write Limit should not be hit");
+    bincode::serde::encode_into_std_write(&message, &mut stdio_lock, bincode_config())
+        .expect("Write Limit should not be hit");
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
@@ -89,7 +91,8 @@ pub fn send_warning_message(warning: SlicerWarnings) {
     let stdout = std::io::stdout();
     let mut stdio_lock = stdout.lock();
     let message = Message::Warning(warning);
-    bincode::serialize_into(&mut stdio_lock, &message).expect("Write Limit should not be hit");
+    bincode::serde::encode_into_std_write(&message, &mut stdio_lock, bincode_config())
+        .expect("Write Limit should not be hit");
     stdio_lock.flush().expect("Standard Out should be limited");
 }
 
@@ -99,7 +102,7 @@ pub fn state_update(state_message: &str, state_context: &mut StateContext) {
             let stdout = std::io::stdout();
             let mut stdio_lock = stdout.lock();
             let message = Message::StateUpdate(state_message.to_string());
-            bincode::serialize_into(&mut stdio_lock, &message)
+            bincode::serde::encode_into_std_write(&message, &mut stdio_lock, bincode_config())
                 .expect("Write Limit should not be hit");
             stdio_lock.flush().expect("Standard Out should be limited");
         }
