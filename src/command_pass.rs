@@ -1,4 +1,4 @@
-use geo_3d::coord;
+use geo_3d::{coord, Vector3DOps};
 use crate::optimizer::{binary_optimizer, state_optomizer, unary_optimizer};
 use crate::{Command, HashMap, Itertools, OrderedFloat, RetractionType, Settings};
 
@@ -12,15 +12,19 @@ impl CommandPass for OptimizePass {
     fn pass(cmds: &mut Vec<Command>, settings: &Settings) {
         let mut size = cmds.len();
 
-        while {
+        loop {
+            // run optimizations
             // arc_optomizer(cmds);
             state_optomizer(cmds);
             unary_optimizer(cmds);
             binary_optimizer(cmds, settings);
 
-            cmds.len() != size
-        } {
-            size = cmds.len();
+            // break if the size has not been changed
+            if cmds.len() != size {
+                size = cmds.len();
+            } else {
+                break;
+            };
         }
     }
 }
@@ -55,9 +59,7 @@ impl CommandPass for SlowDownLayerPass {
                             end_index = index;
                             match cmd {
                                 Command::MoveTo { end } => {
-                                    let x_diff = end.x - current_pos.x;
-                                    let y_diff = end.y - current_pos.y;
-                                    let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
+                                    let d = (*end - *current_pos).magnitude();
                                     current_pos = end;
                                     if current_speed != 0.0 {
                                         non_move_time += d / current_speed;
@@ -69,11 +71,9 @@ impl CommandPass for SlowDownLayerPass {
                                     width: _width,
                                     thickness: _thickness,
                                 } => {
-                                    let x_diff = end.x - start.x;
-                                    let y_diff = end.y - start.y;
-                                    let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
+                                    let dis = (*end - *start).magnitude();
                                     current_pos = end;
-                                    *map.entry(OrderedFloat(current_speed)).or_insert(0.0) += d;
+                                    *map.entry(OrderedFloat(current_speed)).or_insert(0.0) += dis;
                                 }
                                 Command::SetState { new_state } => {
                                     if let Some(speed) = new_state.movement_speed {
@@ -93,14 +93,8 @@ impl CommandPass for SlowDownLayerPass {
                                 Command::Arc {
                                     start, end, center, ..
                                 } => {
-                                    let x_diff = end.x - start.x;
-                                    let y_diff = end.y - start.y;
-                                    let cord_length =
-                                        ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                                    let x_diff_r = end.x - center.x;
-                                    let y_diff_r = end.y - center.y;
-                                    let radius =
-                                        ((x_diff_r * x_diff_r) + (y_diff_r * y_diff_r)).sqrt();
+                                    let cord_length = (*end - *start).magnitude();
+                                    let radius = (*end - *center).magnitude();
 
                                     // Divide the chord length by double the radius.
                                     let t = cord_length / (2.0 * radius);

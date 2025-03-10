@@ -1,5 +1,7 @@
 use crate::{CalculatedValues, Command, Coord, RetractionType, Settings};
+use geo_3d::Vector3DOps;
 
+/// Compute the `CalculatedValues` of `moves`
 pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedValues {
     let mut values = CalculatedValues {
         plastic_volume: 0.0,
@@ -14,12 +16,11 @@ pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedVal
     for cmd in moves {
         match cmd {
             Command::MoveTo { end } => {
-                let x_diff = end.x - current_pos.x;
-                let y_diff = end.y - current_pos.y;
-                let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
+                let dis = (*end - current_pos).magnitude();
+
                 current_pos = *end;
                 if current_speed != 0.0 {
-                    values.total_time += d / current_speed;
+                    values.total_time += dis / current_speed;
                 }
             }
             Command::MoveAndExtrude {
@@ -28,13 +29,12 @@ pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedVal
                 width,
                 thickness,
             } => {
-                let x_diff = end.x - start.x;
-                let y_diff = end.y - start.y;
-                let d = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                current_pos = *end;
-                values.total_time += d / current_speed;
+                let dis = (*end - *start).magnitude();
 
-                values.plastic_volume += width * thickness * d;
+                current_pos = *end;
+                values.total_time += dis / current_speed;
+
+                values.plastic_volume += width * thickness * dis;
             }
             Command::SetState { new_state } => {
                 if let Some(speed) = new_state.movement_speed {
@@ -56,15 +56,11 @@ pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedVal
                 thickness,
                 ..
             } => {
-                let x_diff = end.x - start.x;
-                let y_diff = end.y - start.y;
-                let cord_length = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                let x_diff_r = end.x - center.x;
-                let y_diff_r = end.y - center.y;
-                let radius = ((x_diff_r * x_diff_r) + (y_diff_r * y_diff_r)).sqrt();
+                let coord_length = (*end - *start).magnitude();
+                let radius = (*end - *center).magnitude();
 
                 // Divide the chord length by double the radius.
-                let t = cord_length / (2.0 * radius);
+                let t = coord_length / (2.0 * radius);
 
                 // Find the inverse sine of the result (in radians).
                 // Double the result of the inverse sine to get the central angle in radians.
@@ -81,10 +77,9 @@ pub fn calculate_values(moves: &[Command], settings: &Settings) -> CalculatedVal
     }
 
     values.plastic_weight = (values.plastic_volume / 1000.0) * settings.filament.density;
-    values.plastic_length = values.plastic_volume
-        / (std::f64::consts::PI
-            * (settings.nozzle_diameter / 2.0)
-            * (settings.nozzle_diameter / 2.0));
+    values.plastic_length = values.plastic_volume / (
+        std::f64::consts::PI * (settings.nozzle_diameter / 2.0) * (settings.nozzle_diameter / 2.0)
+    );
 
     values
 }

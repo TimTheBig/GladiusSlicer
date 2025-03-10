@@ -459,23 +459,16 @@ fn get_optimal_bridge_angle(fill_area: &Polygon<f64>, unsupported_area: &MultiPo
     unsupported_lines
         .iter()
         .filter_map(|(line_start, line_end)| {
-            let x_diff = line_end.x - line_start.x;
-            let y_diff = line_end.y - line_start.y;
-
-            let per_vec = (y_diff, -x_diff);
-            let per_vec_len = (((x_diff) * (x_diff)) + ((y_diff) * (y_diff))).sqrt();
+            let mut per_vec = **line_end - **line_start;
+            let per_vec_len = per_vec.magnitude();
+            per_vec.x = -per_vec.x;
 
             if per_vec_len != 0.0 {
                 Some(
                     unsupported_lines
                         .iter()
                         .map(|(inner_start, inner_end)| {
-                            let x_diff = inner_end.x - inner_start.x;
-                            let y_diff = inner_end.y - inner_start.y;
-
-                            let inner_vec = (x_diff, y_diff);
-
-                            let dot = (inner_vec.0 * per_vec.0) + (inner_vec.1 * per_vec.1);
+                            let dot = (**inner_end - **inner_start).dot(per_vec);
 
                             (dot / per_vec_len).abs()
                         })

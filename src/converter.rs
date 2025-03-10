@@ -3,6 +3,7 @@
 use crate::{Command, Settings};
 /// For g-code macro math and variables
 use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMapContext};
+use geo_3d::Vector3DOps;
 use gladius_shared::{error::SlicerErrors, types::RetractionType};
 use std::io::{BufWriter, Write};
 /// The format that the slicing date is written in
@@ -155,9 +156,7 @@ fn write_commands(
                 width,
                 thickness,
             } => {
-                let x_diff = end.x - start.x;
-                let y_diff = end.y - start.y;
-                let length = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
+                let length = (*end - *start).magnitude();
 
                 // let extrusion_width = width + (thickness * (1.0 - std::f64::consts::FRAC_PI_4));
 
@@ -340,12 +339,8 @@ fn write_commands(
                 width,
                 thickness,
             } => {
-                let x_diff = end.x - start.x;
-                let y_diff = end.y - start.y;
-                let cord_length = ((x_diff * x_diff) + (y_diff * y_diff)).sqrt();
-                let x_diff_r = end.x - center.x;
-                let y_diff_r = end.y - center.y;
-                let radius = ((x_diff_r * x_diff_r) + (y_diff_r * y_diff_r)).sqrt();
+                let cord_length = (*end - *start).magnitude();
+                let radius = (*end - *center).magnitude();
 
                 // Divide the chord length by double the radius.
                 let t = cord_length / (2.0 * radius);
