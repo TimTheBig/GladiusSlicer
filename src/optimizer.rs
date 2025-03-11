@@ -1,3 +1,4 @@
+use geo_3d::{Coord, Distance, Length, Line, Vector3DOps};
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, RetractionType, StateChange};
 use itertools::Itertools;
@@ -49,12 +50,14 @@ pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
                     current_pos = s_end;
 
                     if f_end == s_start && s_width == f_width && s_thick == f_thick {
-                        let det = (((f_start.x - s_start.x) * (s_start.y - s_end.y))
-                            - ((f_start.y - s_start.y) * (s_start.x - s_end.x)))
-                            .abs();
+                        // todo check if this checks co-planar or co-linear(correct)
+                        let determinant = ((f_start.x - s_start.x) * ((s_start.y - s_end.y) * (f_start.z - s_start.z) - (f_start.y - s_start.y) * (s_start.z - s_end.z))
+                        - (f_start.y - s_start.y) * ((s_start.x - s_end.x) * (f_start.z - s_start.z) - (f_start.x - s_start.x) * (s_start.z - s_end.z))
+                        + (f_start.z - s_start.z) * ((s_start.x - s_end.x) * (f_start.y - s_start.y) - (f_start.x - s_start.x) * (s_start.y - s_end.y)))
+                        .abs();
 
-                        if det < 0.00001 {
-                            // Colinear
+                        if determinant < 0.00001 {
+                            // Collinear, merge commands
                             return Ok(Command::MoveAndExtrude {
                                 start: f_start,
                                 end: s_end,
@@ -92,7 +95,7 @@ pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
                     Command::MoveTo { end },
                 ) => {
                     if f_state.retract == RetractionType::Retract
-                        && Line::new(current_pos, end).length::<Euclidean>()
+                        && Line::new(current_pos, end).length()
                             < settings.minimum_retract_distance
                     {
                         current_pos = end;
@@ -105,7 +108,7 @@ pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
                             Command::MoveTo { end },
                         ));
                     } else if let RetractionType::MoveRetract(_) = f_state.retract {
-                        if Line::new(current_pos, end).length::<Euclidean>()
+                        if Line::new(current_pos, end).length()
                             < settings.minimum_retract_distance
                         {
                             current_pos = end;
@@ -143,7 +146,7 @@ pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
         .collect();
 }
 
-/// Simplafiy `SetState` commands to only be a diff from the last state
+/// Simplify `SetState` commands to only be a diff from the last state
 pub fn state_optomizer(cmds: &mut Vec<Command>) {
     let mut current_state = StateChange::default();
 
@@ -158,16 +161,14 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
     let mut ranges = vec![];
 
     for (wt, group) in &cmds.iter().enumerate().chunk_by(|cmd| {
-        if let Command::MoveAndExtrude {
-            thickness, width, ..
-        } = cmd.1 {
+        if let Command::MoveAndExtrude { thickness, width, .. } = cmd.1 {
             Some((thickness, width))
         } else {
             None
         }
     }) {
         if let Some((thickness, width)) = wt {
-            let mut current_center = (0.0, 0.0);
+            let mut current_center = (0.0, 0.0, 0.0);
             let mut current_radius = 0.0;
             let mut current_chain = 0;
 
@@ -199,8 +200,8 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
                     (usize, (Coord<f64>, Coord<f64>)),
                 )>()
                 .filter_map(|((pos, (p1, n1)), (_, (p2, n2)))| {
-                    ray_ray_intersection(&p1, &n1, &p2, &n2)
-                        .map(|center| (pos, center.x_y(), center.distance(p1)))
+                    ray_ray_intersection(Line::new(p1, p2), Line::new(n1, n2))
+                        .map(|center| (pos, center.x_y_z(), center.distance(p1)))
                 })
             {
                 last_pos = pos;
@@ -276,40 +277,124 @@ fn line_bisector(p0: Coord<f64>, p1: Coord<f64>, p2: Coord<f64>) -> (Coord<f64>,
     (/* ray_start */ p1, dir)
 }
 
-fn ray_ray_intersection(
-    s0: &Coord<f64>,
-    d0: &Coord<f64>,
-    s1: &Coord<f64>,
-    d1: &Coord<f64>,
-) -> Option<Coord<f64>> {
-    let dx = s1.x - s0.x;
-    let dy = s1.y - s0.y;
+/// Computes the intersection point between a finite line segment and an infinite ray in 3D space.
+///
+/// The function solves for the intersection using parametric equations and vector cross products.\
+/// It ensures the intersection lies within the segment and in the forward direction of the ray.
+///
+/// ## Arguments
+/// - `s`: A finite `Line<f64>`.
+/// - `d`: A `Line<f64>` that extends infinitely.
+///
+/// ## Returns
+/// - `Some(Coord<f64>)` if an intersection is found.
+/// - `None` if the line segment and ray do not intersect.
+///
+/// ## Notes
+/// - If the segment and ray are **parallel**, the function returns `None`.
+/// - If the intersection occurs **behind the ray's origin**, it is ignored.
+///
+/// # Example
+/// ```
+/// # use geo_3d::{Line, Ray, Coord};
+/// let segment = Line {
+///     start: Coord { x: 1.0, y: 1.0, z: 1.0 },
+///     end: Coord { x: 4.0, y: 4.0, z: 4.0 },
+/// };
+/// let ray = Line {
+///     start: Coord { x: 2.0, y: 2.0, z: 0.0 }, // origin
+///     end: Coord { x: 0.0, y: 0.0, z: 1.0 }, // Ray extends infinitely along z-axis
+/// };
+///
+/// let intersection = ray_ray_intersection(segment, ray);
+/// assert_eq!(intersection, Some(Coord { x: 2.0, y: 2.0, z: 2.0 }));
+/// ```
+fn ray_ray_intersection(s: Line<f64>, d: Line<f64>) -> Option<Coord<f64>> {
+    const EPSILON: f64 = 1e-9;
 
-    let det = d1.x * d0.y - d1.y * d0.x;
-    let u = (dy * d1.x - dx * d1.y) / det;
-    let v = (dy * d0.x - dx * d0.y) / det;
-    if (u > 0.0) && (v > 0.0) {
-        let p1_end = *s0 + *d0; // another point in line p1->n1
-        let p2_end = *s1 + *d1; // another point in line p2->n2
+    // Direction vector of segment
+    let s_dir = s.end - s.start;
+    // Direction vector of the ray
+    let magnitude = (d.end.x.powi(2) + d.end.y.powi(2) + d.end.z.powi(2)).sqrt();
+    let unit_direction = d.end / magnitude;
+    let d_dir = unit_direction;
 
-        let m1 = (p1_end.y - s0.y) / (p1_end.x - s0.x); // slope of line p1->n1
-        let m2 = (p2_end.y - s1.y) / (p2_end.x - s1.x); // slope of line p2->n2
+    // Vector between segment start and ray origin
+    let w0 = s.start - d.start;
 
-        let b1 = s0.y - m1 * s0.x; // y-intercept of line p1->n1
-        let b2 = s1.y - m2 * s1.x; // y-intercept of line p2->n2
+    // Compute cross products
+    let cross_sd = s_dir.cross(d_dir);
+    let cross_sd_magnitude_squared = cross_sd.magnitude_squared();
+    let cross_wd = w0.cross(d_dir);
 
-        let px = (b2 - b1) / (m1 - m2); // collision x
-        let py = m1 * px + b1; // collision y
+    // Assert that direction vectors are not zero
+    debug_assert!(s_dir.magnitude() > EPSILON, "Segment has zero length!");
+    debug_assert!(d_dir.magnitude() > EPSILON, "Ray direction cannot be zero!");
 
-        Some(Coord { x: px, y: py, z: pz })
-    } else {
-        None
+    // Check if lines are parallel (cross product is zero vector)
+    if cross_sd_magnitude_squared.sqrt() < EPSILON {
+        return None;
     }
+
+    // Solve for parameters t (on segment) and u (on ray)
+    let t = cross_wd.dot(cross_sd) / cross_sd_magnitude_squared;
+    let u = w0.cross(s_dir).dot(cross_sd) / cross_sd_magnitude_squared;
+
+    // Ensure intersection is within segment bounds (0 ≤ t ≤ 1) and ray extends forward (u ≥ 0)
+    if (-EPSILON..=1.0 + EPSILON).contains(&t) && u >= -EPSILON {
+        let intersection_point = s.start + s_dir * t;
+        return Some(intersection_point);
+    }
+
+    None // No valid intersection
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_intersection() {
+        let segment = Line {
+            start: Coord { x: 1.0, y: 1.0, z: 1.0 },
+            end: Coord { x: 4.0, y: 4.0, z: 4.0 },
+        };
+        let ray = Line {
+            start: Coord { x: 0.0, y: 0.0, z: 0.0 },
+            end: Coord { x: 1.0, y: 1.0, z: 1.0 },
+        };
+        let expected = Some(Coord { x: 1.0, y: 1.0, z: 1.0 });
+
+        assert_eq!(ray_ray_intersection(segment, ray), expected);
+    }
+
+    #[test]
+    fn test_no_intersection() {
+        let segment = Line {
+            start: Coord { x: 2.0, y: 2.0, z: 2.0 },
+            end: Coord { x: 4.0, y: 4.0, z: 4.0 },
+        };
+        let ray = Line {
+            start: Coord { x: 0.0, y: 0.0, z: 0.0 },
+            end: Coord { x: -1.0, y: -1.0, z: -1.0 },
+        };
+
+        assert_eq!(ray_ray_intersection(segment, ray), None);
+    }
+
+    #[test]
+    fn test_parallel_no_intersection() {
+        let segment = Line {
+            start: Coord { x: 1.0, y: 1.0, z: 1.0 },
+            end: Coord { x: 3.0, y: 3.0, z: 3.0 },
+        };
+        let ray = Line {
+            start: Coord { x: 0.0, y: 0.0, z: 0.0 },
+            end: Coord { x: 2.0, y: 2.0, z: 2.0 },
+        };
+
+        assert_eq!(ray_ray_intersection(segment, ray), None);
+    }
 
     #[test]
     fn basic_line_bisector() {
@@ -356,26 +441,38 @@ mod tests {
     #[test]
     fn basic_ray_ray() {
         let center = ray_ray_intersection(
-            &Coord { x: 0.0, y: 0.0, z: 0.0 },
-            &Coord { x: 1.0, y: 1.0, z: 1.0 },
-            &Coord { x: 2.0, y: 0.0, z: 2.0 },
-            &Coord { x: -1.0, y: 1.0, z: -1.0 },
+            Line {
+                start: Coord { x: 0.0, y: 0.0, z: 0.0 },
+                end: Coord { x: 2.0, y: 0.0, z: 2.0 },
+            },
+            Line {
+                start: Coord { x: -1.0, y: 1.0, z: -1.0 },
+                end: Coord { x: 1.0, y: 1.0, z: 1.0 },
+            }
         );
-        assert_eq!(center, Some(Coord { x: 1.0, y: 1.0, z: 1.0 }));
+        assert_eq!(center, Some(Coord { x: 2.0, y: 0.0, z: 2.0 }));
 
         let center = ray_ray_intersection(
-            &Coord { x: 0.0, y: 3.0, z: 0.0 },
-            &Coord { x: 5.0, y: 1.0, z: 0.0 },
-            &Coord { x: 2.0, y: 0.0, z: 0.0 },
-            &Coord { x: 3.0, y: 4.0, z: 0.0 },
+            Line {
+                start: Coord { x: 0.0, y: 3.0, z: 0.0 },
+                end: Coord { x: 2.0, y: 0.0, z: 0.0 },
+            },
+            Line {
+                start: Coord { x: 3.0, y: 4.0, z: 0.0 },
+                end: Coord { x: 5.0, y: 1.0, z: 0.0 },
+            },
         );
         assert_eq!(center, Some(Coord { x: 5.0, y: 4.0, z: 0.0 }));
 
         let center = ray_ray_intersection(
-            &Coord { x: 1.0, y: 3.0, z: 0.0 },
-            &Coord { x: 0.10, y: -0.20, z: 0.0 },
-            &Coord { x: 0.0, y: -2.0, z: 0.0 },
-            &Coord { x: 2.0, y: 3.0, z: 0.0 },
+            Line {
+                start: Coord { x: 1.0, y: 3.0, z: 0.0 },
+                end: Coord { x: 0.0, y: -2.0, z: 0.0 },
+            },
+            Line {
+                start: Coord { x: 2.0, y: 3.0, z: 0.0 },
+                end: Coord { x: 0.10, y: -0.20, z: 0.0 },
+            },
         );
         assert_eq!(center, Some(Coord { x: 2.0, y: 1.0, z: 0.0 }));
     }
