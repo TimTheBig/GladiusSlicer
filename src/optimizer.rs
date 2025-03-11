@@ -1,4 +1,3 @@
-use geo_3d::{Coord, Distance, Euclidean, Length, Line};
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, RetractionType, StateChange};
 use itertools::Itertools;
@@ -25,6 +24,7 @@ pub fn unary_optimizer(cmds: &mut Vec<Command>) {
     });
 }
 
+/// Merge consecutive commands, that have the same end result when merged
 pub fn binary_optimizer(cmds: &mut Vec<Command>, settings: &Settings) {
     let mut current_pos = Coord::zero();
 

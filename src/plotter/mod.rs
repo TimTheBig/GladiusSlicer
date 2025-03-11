@@ -18,6 +18,8 @@ use gladius_shared::types::{Command, Move, MoveChain, MoveType, RetractionType, 
 use itertools::Itertools;
 use log::info;
 use ordered_float::OrderedFloat;
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
 
 // todo document
 pub trait Plotter {
@@ -326,17 +328,14 @@ impl Plotter for Slice {
                 let retract_command =
                     if let Some(retraction_wipe) = self.layer_settings.retraction_wipe.as_ref() {
                         let ordered: Vec<Coord<f64>> = if chain.is_loop {
-                            // fixme this is bad
-                            chain
-                                .moves
-                                .iter()
-                                .rev()
+                            let mut ordered_loop = chain.moves
+                                .iter().rev()
                                 .take_while(|m| m.move_type != MoveType::Travel)
                                 .map(|m| m.end)
-                                .collect::<Vec<_>>()
-                                .into_iter()
-                                .rev()
-                                .collect_vec()
+                                .collect::<Vec<_>>();
+
+                            ordered_loop.reverse();
+                            ordered_loop
                         } else {
                             chain.moves.iter().rev().map(|m| m.end).collect_vec()
                         };
@@ -484,13 +483,16 @@ fn get_optimal_bridge_angle(fill_area: &Polygon<f64>, unsupported_area: &MultiPo
                 .partial_cmp(r_sum)
                 .expect("Sum should not contain NAN")
         })
-        .map_or(0.0, |((x, y), _)| -90.0 - (y).atan2(x).to_degrees())
+        // todo make 3d and document
+        .map_or(0.0, |(c, _)| -90.0 - (c.y).atan2(c.x).to_degrees())
 }
 
+// todo make 3d
 pub fn convert_objects_into_moves(objects: Vec<Object>, settings: &Settings) -> Vec<Command> {
     info!("Convert into Commands");
+
     let mut layer_moves: Vec<(f64, Vec<Command>)> = objects
-        .into_iter()
+        .into_par_iter()
         .enumerate()
         .map(|(object_num, object)| {
             let mut last_layer = 0.0;
@@ -545,11 +547,15 @@ pub fn convert_objects_into_moves(objects: Vec<Object>, settings: &Settings) -> 
                 })
                 .collect::<Vec<(f64, Vec<Command>)>>()
         })
-        .flat_map(std::iter::IntoIterator::into_iter)
+        .flat_map(|cmds| cmds.into_par_iter())
         .collect();
 
+    // todo check that this is faster
+    // sort by layer height
     layer_moves
-        .sort_by(|(a, _), (b, _)| a.partial_cmp(b).expect("No NAN layer heights are allowed"));
+        .par_sort_by(|(a, _), (b, _)| {
+            a.partial_cmp(b).expect("No NAN layer heights are allowed")
+        });
 
     layer_moves
         .into_iter()
