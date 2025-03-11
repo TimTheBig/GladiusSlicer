@@ -6,7 +6,7 @@ fn files_settings_validation() {
     let mut settings_path = current_path.clone();
     settings_path.push("settings");
     std::env::set_current_dir(&settings_path).unwrap();
-    let printers = vec!["Voron0.1.json", "CR10.json", "PrusaMk3.json"];
+    let printers = vec!["Voron0.1.json", "CR10.json", "PrusaMk3.json", "BBL_x1c.json"];
     let layers = vec![
         "0.1_layer_height.json",
         "0.2_layer_height.json",
@@ -17,6 +17,7 @@ fn files_settings_validation() {
         "PETG_Filament.json",
         "TPU_Filament.json",
         "PLA_Filament.json",
+        "BBL_PLA_Filament.json"
     ];
 
     for printer in &printers {
@@ -32,7 +33,7 @@ fn files_settings_validation() {
                     partial_settings: PartialSettings::default(),
                 };
 
-                let result_settings = psf.get_settings(std::env::current_dir().unwrap());
+                let result_settings = psf.get_settings(&std::env::current_dir().unwrap());
 
                 let settings = result_settings.unwrap();
 

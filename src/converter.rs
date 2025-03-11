@@ -6,8 +6,6 @@ use evalexpr::{context_map, eval_float_with_context, DefaultNumericTypes, HashMa
 use geo_3d::Vector3DOps;
 use gladius_shared::{error::SlicerErrors, types::RetractionType};
 use std::io::{BufWriter, Write};
-/// The format that the slicing date is written in
-use time::format_description::well_known::Iso8601;
 
 /// Write the `Command`s, start/end instructions and extra info as final g-code to the given buffer.\
 /// Current date, slicer version, and settings are added to the top as comments
@@ -27,7 +25,12 @@ pub fn convert(
         ";============= slicing date: {} ==============",
         time::OffsetDateTime::now_utc()
             .to_offset(time::UtcOffset::current_local_offset().unwrap_or(time::UtcOffset::UTC))
-            .format(&Iso8601::DATE)
+            .format(
+                &time::macros::format_description!(
+                    version = 2,
+                    "[weekday repr:short] [month repr:short] [day] [hour repr:12]:[minute][period], [year]"
+                )
+            )
             .expect("This is a valid format")
     )
     .map_err(|_| SlicerErrors::FileWriteError)?;
