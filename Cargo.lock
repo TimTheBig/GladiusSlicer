@@ -545,7 +545,7 @@ dependencies = [
 [[package]]
 name = "geo-3d"
 version = "0.30.0"
-source = "git+https://github.com/TimTheBig/geo-3d.git#4a86515cc0c2f0cbb28d9b0b0047ccd6fe92c4b5"
+source = "git+https://github.com/TimTheBig/geo-3d.git#74ed7b2b490ac59b542e0774fe7eba52b680247a"
 dependencies = [
  "d-delaunay",
  "float_next_after",
@@ -605,7 +605,7 @@ dependencies = [
 [[package]]
 name = "geo-types"
 version = "0.8.0"
-source = "git+https://github.com/TimTheBig/geo-3d.git#4a86515cc0c2f0cbb28d9b0b0047ccd6fe92c4b5"
+source = "git+https://github.com/TimTheBig/geo-3d.git#74ed7b2b490ac59b542e0774fe7eba52b680247a"
 dependencies = [
  "approx",
  "num-traits",
@@ -867,9 +867,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.170"
+version = "0.2.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "875b3680cb2f8f71bdcf9a30f38d48282f5d3c95cbf9b3fa57269bb5d5c06828"
+checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
 
 [[package]]
 name = "libm"

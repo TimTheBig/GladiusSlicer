@@ -116,7 +116,7 @@ pub enum SlicerErrors {
     SliceAngleOutOfRange(f64),
 
     /// Invalid bed exclusion polygon
-    InvalidBedExcludeArea(String),
+    InvalidBedExcludeArea(geo_3d::validation::InvalidMultiPolygon),
 }
 
 impl SlicerErrors {
@@ -199,7 +199,7 @@ impl SlicerErrors {
                 (0x1017, format!("The slice angle setting must in in a range of -89 to 89 as a higher angle can be redusted, angle was: {}", angle))
             },
             SlicerErrors::InvalidBedExcludeArea(reason) => {
-                (0x1018, format!("The settings file contains an invalid bed exclusion area: {:?}", reason))
+                (0x1018, format!("The settings file contains an invalid bed exclusion area: {}", reason))
             },
         }
     }

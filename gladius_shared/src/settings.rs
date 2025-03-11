@@ -524,9 +524,7 @@ impl Settings {
             // If it fails its likely failing due to the polygon not being complete
             // The first and last points must be the same to be complete
             if let Err(reason) = exclude_area.check_validation() {
-                return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(
-                    format!("{}", reason),
-                ));
+                return SettingsValidationResult::Error(SlicerErrors::InvalidBedExcludeArea(reason));
             }
         }
 
