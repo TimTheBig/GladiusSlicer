@@ -54,7 +54,7 @@ pub fn inset_polygon_recursive(
         });
 
         for interior in polygon.interiors() {
-            let mut moves = Vec::with_capacity(interior.0.len());
+            let mut moves = Vec::with_capacity(interior.0.len() + 1); // account for extras from `circular_tuple_windows`
             for (&_start, &end) in interior.0.iter().circular_tuple_windows::<(_, _)>() {
                 let move_type = if outer_perimeter {
                     MoveType::InteriorSurfacePerimeter

@@ -43,15 +43,18 @@ pub fn convert(
     // Output the settings to the g-code file
     writeln!(write_buf, "; Settings:")
         .map_err(|_| SlicerErrors::FileWriteError)?;
-    for line in serde_json::to_string_pretty(&settings).expect("The serde impl of settings is sound").lines() {
-        writeln!(
-            // lending ; to make comment
-            write_buf,
-            ";\t{}",
-            line
-        )
+    let settings_json = serde_json::to_string_pretty(&settings).expect("The serde impl of settings is sound");
+    let settings_len = settings_json.len();
+    let settings_json = settings_json.lines();
+
+    let mut settings_gcode = String::with_capacity(settings_len + (settings_json.size_hint().0 * 2));
+    settings_json.for_each(|line| {
+        settings_gcode.push_str(";\t");
+        settings_gcode.push_str(line);
+    });
+
+    write_buf.write(settings_gcode.as_bytes())
         .map_err(|_| SlicerErrors::FileWriteError)?;
-    }
     // Make it easier to parse
     writeln!(
         // lending ; to make comment
