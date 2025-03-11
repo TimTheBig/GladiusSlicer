@@ -153,8 +153,14 @@ fn write_commands(
     Ok(for cmd in cmds {
         match cmd {
             Command::MoveTo { end, .. } => {
-                writeln!(write_buf, "G1 X{:.5} Y{:.5}", end.x, end.y)
-                    .map_err(|_| SlicerErrors::FileWriteError)?
+                // save size on XY moves
+                if end.z == current_z {
+                    writeln!(write_buf, "G1 X{:.5} Y{:.5}", end.x, end.y)
+                        .map_err(|_| SlicerErrors::FileWriteError)?
+                } else {
+                    writeln!(write_buf, "G1 X{:.5} Y{:.5} Z{:.5}", end.x, end.y, end.z)
+                        .map_err(|_| SlicerErrors::FileWriteError)?
+                }
             },
             Command::MoveAndExtrude {
                 start,
@@ -180,8 +186,14 @@ fn write_commands(
 
                 let extrude = extrusion_volume / filament_area;
 
-                writeln!(write_buf, "G1 X{:.5} Y{:.5} E{:.5}", end.x, end.y, extrude)
-                    .map_err(|_| SlicerErrors::FileWriteError)?;
+                // save size on XY moves
+                if end.z == current_z {
+                    writeln!(write_buf, "G1 X{:.5} Y{:.5} E{:.5}", end.x, end.y, extrude)
+                        .map_err(|_| SlicerErrors::FileWriteError)?;
+                } else {
+                    writeln!(write_buf, "G1 X{:.5} Y{:.5} Z{:.5} E{:.5}", end.x, end.y, end.z, extrude)
+                        .map_err(|_| SlicerErrors::FileWriteError)?;
+                }
             }
             Command::SetState { new_state } => {
                 match &new_state.retract {
@@ -254,12 +266,21 @@ fn write_commands(
                         }
 
                         for (retract_amount, end) in moves {
-                            writeln!(
-                                write_buf,
-                                "G1 X{:.5} Y{:.5} E{:.5}; Retract with move",
-                                end.x, end.y, -retract_amount
-                            )
-                            .map_err(|_| SlicerErrors::FileWriteError)?;
+                            if end.z == current_z {
+                                writeln!(
+                                    write_buf,
+                                    "G1 X{:.5} Y{:.5} E{:.5}; Retract with move",
+                                    end.x, end.y, -retract_amount
+                                )
+                                .map_err(|_| SlicerErrors::FileWriteError)?;
+                            } else {
+                                writeln!(
+                                    write_buf,
+                                    "G1 X{:.5} Y{:.5} Z{:.5} E{:.5}; Retract with move",
+                                    end.x, end.y, end.z, -retract_amount
+                                )
+                                .map_err(|_| SlicerErrors::FileWriteError)?;
+                            }
                         }
 
                         writeln!(
@@ -283,7 +304,7 @@ fn write_commands(
                 if let Some(fan_speed) = new_state.fan_speed {
                     writeln!(
                         write_buf,
-                        "M106 S{} ; set fan speed",
+                        "M106 S{}; set fan speed",
                         (2.550 * fan_speed).round() as usize
                     )
                     .map_err(|_| SlicerErrors::FileWriteError)?;
@@ -292,7 +313,7 @@ fn write_commands(
                     if let Some(aux_fan_speed) = new_state.aux_fan_speed {
                         writeln!(
                             write_buf,
-                            "M106 P2 S{} ; set aux fan speed",
+                            "M106 P2 S{}; set aux fan speed",
                             (2.550 * aux_fan_speed).round() as usize
                         )
                         .map_err(|_| SlicerErrors::FileWriteError)?;
@@ -365,10 +386,11 @@ fn write_commands(
 
                 writeln!(
                     write_buf,
-                    "{} X{:.5} Y{:.5} I{:.5} J{:.5} E{:.5}",
+                    "{} X{:.5} Y{:.5} Z{:.5} I{:.5} J{:.5} E{:.5}",
                     if *clockwise { "G2" } else { "G3" },
                     end.x,
                     end.y,
+                    end.z,
                     center.x - start.x,
                     center.y - start.y,
                     extrude
@@ -401,10 +423,11 @@ fn write_commands(
 /// Parse and evaluate g-code macros, returning a string to be into the g-code.\
 /// For example the macro `{1.5+4.0}`, would evaluate to a string of "5.5", or `{curr_extruder_temp+3.0}`.
 ///
-/// For macro names see [`parse_macro`]
+/// For macro names see [`parse_macro`] and [`evalexpr::function::builtin`] for functions
 ///
-/// ## Examples
-/// ```no_run
+/// ## Example
+/// ```
+/// # use super::Settings;
 /// assert_eq!(
 ///     convert_instructions("{1.5+3.0}", 0.0, 0, Some(1), Some(2), &Settings::default()),
 ///     Ok(String::from("4.5"))
@@ -481,9 +504,9 @@ fn parse_macro(
         "bed_temp" => float layer_settings.bed_temp,
         "z_pos" => float current_z_height,
         "layer_count" => float f64::from(layer_count),
-        "prev_obj" => float previous_object.map_or(-1., |o| o  as f64),
-        "curr_obj" => float current_object.map_or(-1., |o| o  as f64),
-        "current_obj" => float current_object.map_or(-1., |o| o  as f64),
+        "prev_obj" => float previous_object.map_or(-1., |o| o as f64),
+        "curr_obj" => float current_object.map_or(-1., |o| o as f64),
+        "current_obj" => float current_object.map_or(-1., |o| o as f64),
         "exterior_inner_perimeter_speed" => float layer_settings.speed.exterior_inner_perimeter,
         "exterior_surface_perimeter_speed" => float layer_settings.speed.exterior_surface_perimeter,
         "interior_inner_perimeter_speed" => float layer_settings.speed.interior_inner_perimeter,
@@ -519,6 +542,10 @@ mod tests {
             Ok(String::from("4.5"))
         );
         assert_eq!(
+            parse_macro("1 + 3.0", 0.0, 0, Some(1), Some(2), &Settings::default()),
+            Ok(String::from("4"))
+        );
+        assert_eq!(
             parse_macro(
                 "curr_extruder_temp",
                 0.0,
@@ -535,6 +562,10 @@ mod tests {
     fn convert_instructions_test() {
         assert_eq!(
             convert_instructions("{1.5+3.0}", 0.0, 0, Some(1), Some(2), &Settings::default()),
+            Ok(String::from("4.5"))
+        );
+        assert_eq!(
+            convert_instructions("{1.5 +3.0}", 0.0, 0, Some(1), Some(2), &Settings::default()),
             Ok(String::from("4.5"))
         );
         assert_eq!(
