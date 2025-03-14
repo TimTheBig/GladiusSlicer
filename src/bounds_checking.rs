@@ -1,4 +1,4 @@
-use geo_3d::{contains::ContainsXY, MultiPolygon, Point};
+use geo_3d::{contains::ContainsXY, MultiPolygon, Coord};
 use gladius_shared::error::SlicerErrors;
 use gladius_shared::settings::Settings;
 use gladius_shared::types::{Command, IndexedTriangle, Vertex};
@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 /// Check if the point is in an excluded area
 fn check_excluded(
-    v_point: Point,
+    v_point: Coord,
     bed_exclude_areas: &Option<MultiPolygon>,
 ) -> Result<(), SlicerErrors> {
     for polygon in bed_exclude_areas.as_ref() {
@@ -33,7 +33,7 @@ pub fn check_model_bounds(
         .flat_map(|model| model.0.iter())
         .map(|v| {
             // Check if the point is in an excluded area
-            check_excluded(Point::from(v.0), &settings.bed_exclude_areas)?;
+            check_excluded(v.0, &settings.bed_exclude_areas)?;
 
             if v.0.x < total_offset
                 || v.0.y < total_offset
@@ -89,12 +89,12 @@ pub fn check_moves_bounds(moves: &[Command], settings: &Settings) -> Result<(), 
 #[cfg(test)]
 mod bounds_check_tests {
     use super::*;
-    use geo_3d::{LineString, Polygon};
+    use geo_3d::{coord, LineString, Polygon};
 
     #[test]
     fn test_slice_with_model_in_excluded_area() {
         check_excluded(
-            Point::new(30.1, 58.6, 0.0),
+            coord!(30.1, 58.6, 0.0),
             &Some(MultiPolygon::new(vec![Polygon::new(
                 LineString::from(vec![(0.0, 0.0, 0.0), (256.0, 0.0, 0.0), (256.0, 256.0, 256.0), (0.0, 256.0, 0.0)]),
                 Vec::new(),
@@ -103,7 +103,7 @@ mod bounds_check_tests {
         .unwrap_err();
 
         check_excluded(
-            Point::new(5.7, 8.4, 35.0),
+            coord!(5.7, 8.4, 35.0),
             &Some(MultiPolygon::new(vec![Polygon::new(
                 LineString::from(vec![(0.0, 0.0, 0.0), (2.0, 0.0, 2.0), (6.0, 5.0, 6.0), (0.0, 2.0, 0.0)]),
                 Vec::new(),
