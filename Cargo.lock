@@ -545,12 +545,13 @@ dependencies = [
 [[package]]
 name = "geo-3d"
 version = "0.30.0"
-source = "git+https://github.com/TimTheBig/geo-3d.git#74ed7b2b490ac59b542e0774fe7eba52b680247a"
+source = "git+https://github.com/TimTheBig/geo-3d.git#0be3a125490840f47efd9ba94f50685b60ab871c"
 dependencies = [
  "d-delaunay",
  "float_next_after",
  "geo-types 0.8.0",
  "glam",
+ "itertools 0.14.0",
  "log",
  "num-traits",
  "quickhull",
@@ -605,7 +606,7 @@ dependencies = [
 [[package]]
 name = "geo-types"
 version = "0.8.0"
-source = "git+https://github.com/TimTheBig/geo-3d.git#74ed7b2b490ac59b542e0774fe7eba52b680247a"
+source = "git+https://github.com/TimTheBig/geo-3d.git#0be3a125490840f47efd9ba94f50685b60ab871c"
 dependencies = [
  "approx",
  "num-traits",
@@ -1088,9 +1089,9 @@ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "peroxide"
-version = "0.39.2"
+version = "0.39.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "449fc3aa2419a27ff290cb774f73701dd77a53b51c32b2d5ad3edc994f593436"
+checksum = "4be81bfdeaba1ebdaae46c37bae9c2bd88237cc320a5c40ebab53529de4a2ca1"
 dependencies = [
  "anyhow",
  "matrixmultiply",
@@ -1193,11 +1194,12 @@ dependencies = [
 
 [[package]]
 name = "puruspe"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5666f1226a41ebb7191b702947674f4814c9919da58a9f91a60090412664bbce"
+checksum = "d76c522e44709f541a403db419a7e34d6fbbc8e6b208589ae29a030cddeefd96"
 dependencies = [
  "lambert_w",
+ "num-complex",
 ]
 
 [[package]]
@@ -1211,9 +1213,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.39"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1f1914ce909e1658d9907913b4b91947430c7d9be598b15a1912935b8c04801"
+checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
 ]
