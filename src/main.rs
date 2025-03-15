@@ -256,7 +256,7 @@ fn main() {
                 handle_err_or_return(convert(&moves, &settings, &mut gcode), &state_context);
                 let message = Message::GCode(
                     String::from_utf8(gcode)
-                        .expect("All write occur from write macro so should be utf-8"),
+                        .expect("All writes occur from write! macro so should be utf-8"),
                 );
                 bincode::serde::encode_into_std_write(&message, &mut BufWriter::new(std::io::stdout()), bincode_config())
                     .expect("Write Limit should not be hit");

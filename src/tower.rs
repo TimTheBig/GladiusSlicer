@@ -567,7 +567,7 @@ pub fn angle_to_normal(slice_angle: f64) -> Vertex {
     ));
 
     // Calculate the normal vector based on the angle
-    // In XZ plane mode switch x and z then z and y
+    // To use XZ plane mode switch x and z then z and y
     // plane_normal
     Vertex::new(
         // 0.0 when angle is zero, 0.7071067812 when angle is 45.0

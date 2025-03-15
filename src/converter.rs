@@ -519,6 +519,7 @@ fn parse_macro(
         "print_size_x" => float settings.print_x,
         "print_size_y" => float settings.print_y,
         "print_size_z" => float settings.print_z,
+        "has_aux_fan" => settings.has_aux_fan,
         "PI" => float std::f64::consts::PI,
     }
     .map_err(|e| SlicerErrors::SettingMacroParseError {

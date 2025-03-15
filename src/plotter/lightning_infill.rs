@@ -90,14 +90,15 @@ pub fn lightning_layer(
         .cartesian_product((min_y / v_spacing) as usize..=(max_y / v_spacing) as usize + 1)
         .map(|(x, y)| {
             if y % 2 == 0 {
-                Coord::from((x as f64 * h_spacing, y as f64 * v_spacing))
+                // todo remove temp slice.get_height()
+                Coord::from((x as f64 * h_spacing, y as f64 * v_spacing, slice.get_height()))
             } else {
-                Coord::from(((x as f64 - 0.5) * h_spacing, y as f64 * v_spacing))
+                Coord::from(((x as f64 - 0.5) * h_spacing, y as f64 * v_spacing, slice.get_height()))
             }
         })
         .filter(|coord| unsupported_area.contains(coord))
         .map(|coord| LightningNode {
-            children: vec![],
+            children: Vec::new(),
             location: coord,
         })
         .chain(fragments)

@@ -20,18 +20,13 @@ struct MonotonePoint {
 
 impl Ord for MonotonePoint {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.pos
-            .y
-            .partial_cmp(&other.pos.y)
-            .map(|cmp| {
-                cmp.then(
-                    self.pos
-                        .x
-                        .partial_cmp(&other.pos.x)
-                        .expect("Points Should not contain NAN"),
-                )
-            })
+        // self.z.cmp(other.z).then(self.y.cmp(other.y).then(self.x.cmp(other.x)))
+        self.pos.y.partial_cmp(&other.pos.y)
             .expect("Points Should not contain NAN")
+            .then(
+                self.pos.x.partial_cmp(&other.pos.x)
+                    .expect("Points Should not contain NAN")
+            )
     }
 }
 
@@ -57,7 +52,7 @@ enum PointType {
 ///
 /// The sections will only intersect any line perpendicular to the y-axis in two places.
 ///
-/// # Arguments
+/// ## Arguments
 ///
 /// * `poly` - the polygon to divide
 pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
@@ -67,8 +62,7 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
         .chain(poly.simplify_vw_preserve(&0.0001).interiors().iter())
         .flat_map(|line_string| {
             line_string
-                .0
-                .iter()
+                .0.iter()
                 .take(line_string.0.len() - 1)
                 .circular_tuple_windows::<(&Coord<f64>, &Coord<f64>, &Coord<f64>)>()
                 .map(|(&next, &point, &prev)| {
@@ -191,12 +185,10 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
 
                 assert_eq!(
                     *left_section
-                        .right_chain
-                        .last()
+                        .right_chain.last()
                         .expect("Chain must have entries"),
                     *right_section
-                        .left_chain
-                        .last()
+                        .left_chain.last()
                         .expect("Chain must have entries")
                 );
 
@@ -277,7 +269,8 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
 
 fn is_above(a: &Coord<f64>, b: &Coord<f64>) -> bool {
     a.y.partial_cmp(&b.y)
-        .map(|cmp| cmp.then(a.x.partial_cmp(&b.x).expect("Coords should not be NAN")))
-            .expect("Coords should not be NAN")
+        .map(|cmp| {
+            cmp.then(a.x.partial_cmp(&b.x).expect("Coords should not be NAN"))
+        }).expect("Coords should not be NAN")
         == Ordering::Greater
 }

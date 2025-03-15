@@ -136,10 +136,10 @@ pub const fn point_lerp(a: Coord<f64>, b: Coord<f64>, f: f64) -> Coord<f64> {
 }
 
 /// ## Linear Interpolate
-/// Compute values between **a** and **b**, with **f** as the interpolated point from 0.0 to 1.0
-#[inline]
-pub const fn lerp(a: f64, b: f64, f: f64) -> f64 {
-    a + f * (b - a)
+/// Compute values between **a** and **b**, with **t** as the interpolated point from 0.0 to 1.0
+#[inline(always)]
+pub const fn lerp(a: f64, b: f64, t: f64) -> f64 {
+    a + t * (b - a)
 }
 
 /// Function to generate a unit bisector of the angle p0, p1, p2 that will always be inside the angle to the left
