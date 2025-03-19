@@ -9,13 +9,13 @@ json_schema_gen = ["dep:schemars"]
 doc_constants = ["dep:documented"]
 
 [dependencies]
-zip = { version = "2.2.3", features = ["bzip2", "deflate", "deflate64", "lzma", "time", "xz", "zstd"], default-features = false }
+zip = { version = "2.4.2", features = ["bzip2", "deflate", "deflate64", "lzma", "time", "xz", "zstd"], default-features = false }
 
 nom_stl = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
 
-serde-xml-rs = { version = "0.6", git = "https://github.com/TimTheBig/serde-xml-rs.git", package = "serde-xml-rust" }
-geo-3d = {version = "0.30", features = ["use-serde"], git = "https://github.com/TimTheBig/geo-3d.git" }
+quick-xml = { version = "0.37", features = ["serialize"]}
+geo-3d = {version = "0.31", features = ["use-serde"], git = "https://github.com/TimTheBig/geo-3d.git" }
 nalgebra = "0.33"
 deser-hjson = "2.2"
 serde_json = "^1.0.85"

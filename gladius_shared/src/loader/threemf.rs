@@ -1,6 +1,7 @@
 use crate::error::SlicerErrors;
 use crate::loader::{IndexedTriangle, Loader, Transform, Vertex};
 use serde::Deserialize;
+use std::io::BufReader;
 
 #[derive(Deserialize, Debug)]
 struct Relationships {
@@ -109,7 +110,7 @@ impl Loader for ThreeMFLoader {
         };
 
         let rel: Relationships =
-            serde_xml_rs::de::from_reader(rel_file).map_err(|_| SlicerErrors::ThreemfLoadError)?;
+            quick_xml::de::from_reader(BufReader::new(rel_file)).map_err(|_| SlicerErrors::ThreemfLoadError)?;
 
         let model_path = &rel.relationship[0].target;
 
@@ -120,7 +121,7 @@ impl Loader for ThreeMFLoader {
             }
         };
 
-        let model: ThreeMFModel = serde_xml_rs::de::from_reader(model_file)
+        let model: ThreeMFModel = quick_xml::de::from_reader(BufReader::new(model_file))
             .map_err(|_| SlicerErrors::ThreemfLoadError)?;
 
         model
