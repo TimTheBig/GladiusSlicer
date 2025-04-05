@@ -54,7 +54,7 @@ mod utils;
 #[cfg(test)]
 mod test;
 
-/// The `Vertex` that defines the slicing plane, to perject another `Vertex` you take the dot product of it with this.
+/// The `Vertex` that defines the slicing plane, to project a `Vertex` to the plane you take the dot product of it with this.
 /// 
 /// ## Example
 /// ```
@@ -178,12 +178,12 @@ fn main() {
     );
     if args.print_settings {
         for line in gladius_shared::settings::SettingsPrint::to_strings(&settings) {
-            println!("{}", line);
+            println!("{line}");
         }
         std::process::exit(0);
     } else if log::log_enabled!(log::Level::Trace) {
         for line in gladius_shared::settings::SettingsPrint::to_strings(&settings) {
-            log::trace!("{}", line);
+            log::trace!("{line}");
         }
     }
 

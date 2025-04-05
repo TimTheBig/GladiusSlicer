@@ -183,7 +183,7 @@ pub fn orientation(p: &Coord<f64>, q: &Coord<f64>, r: &Coord<f64>) -> Orientatio
     let left_val = (q.x - p.x) * (r.y - p.y);
     let right_val = (q.y - p.y) * (r.x - p.x);
 
-    if left_val == right_val {
+    if (left_val - right_val).abs() < f64::EPSILON {
         Orientation::Linear
     } else if left_val > right_val {
         Orientation::Left

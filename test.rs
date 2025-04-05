@@ -23,7 +23,7 @@ pub trait TowerVertex: Ord + Send + Eq {
     }
 }
 
-/// A single 3D vertex, with normal vertex perjection based methods
+/// A single 3D vertex, with normal vertex projection based methods
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct NormalVertex {
     /// X Coord
@@ -72,7 +72,7 @@ impl TowerVertex for NormalVertex {
     }
 
     fn get_height(&self) -> f64 {
-        // height is the Z position perjected on to the plane normal
+        // height is the Z position projected on to the plane normal
         self.dot(
             PLANE_NORMAL.get()
                 .expect("This is initialized before this can be called in main"),

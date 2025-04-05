@@ -12,7 +12,7 @@ use crate::utils::lerp;
 use crate::{SlicerErrors, PLANE_NORMAL};
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use gladius_shared::types::{IndexedTriangle, Vertex};
-use log::{debug, trace};
+use log::trace;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -367,8 +367,8 @@ impl Hash for TowerRingElement {
     }
 }
 
-// Join fragmented rings together to for new rings
-// A ring can be joined if its last element matches another rings first element
+/// Join fragmented rings together to for new rings.\
+/// A ring can be joined if its last element matches another rings first element
 fn join_fragments(fragments: &mut Vec<TowerRing>) {
     // Early return for empty fragments
     if fragments.is_empty() {
@@ -544,7 +544,7 @@ pub trait TowerVertex: Ord + Send + Eq + From<Vertex> {
     fn line_height_intersection(height: f64, v_start: &Self, v_end: &Self) -> Self;
 
     /// Get the dot product of two tower vertices
-    /// This must not use get_height as that would be an **∞** loop
+    /// This must not use `get_height` as that would be an **∞** loop
     #[inline]
     fn dot<V: TowerVertex>(&self, other: &V) -> f64 {
         self.get_slice_x() * other.get_slice_x()
@@ -560,7 +560,7 @@ pub fn angle_to_normal(slice_angle: f64) -> Vertex {
     let slice_angle_radians = slice_angle * std::f64::consts::PI / 180.0;
 
     #[cfg(debug_assertions)]
-    debug!("plane_normal: {:?}", Vertex::new(
+    log::debug!("plane_normal: {:?}", Vertex::new(
         slice_angle_radians.sin(),
         0.0,
         slice_angle_radians.cos(),
@@ -614,7 +614,7 @@ impl TowerVertex for Vertex {
     }
 }
 
-/// A single 3D vertex, with normal vertex perjection based methods
+/// A single 3D vertex, with normal vertex projection based methods
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct NormalVertex {
     /// X Coord
@@ -669,7 +669,7 @@ impl TowerVertex for NormalVertex {
     }
 
     fn get_height(&self) -> f64 {
-        // height is the Z position perjected on to the plane normal
+        // height is the Z position projected on to the plane normal
         self.dot(
             PLANE_NORMAL.get()
                 .expect("This is initialized before this can be called in main"),
@@ -1087,13 +1087,13 @@ mod tests {
 
     #[test]
     fn test_angle_to_normal() {
-        // Test that perjecting on 0° returns z
+        // Test that projecting on 0° returns z
         let ver0_deg = Vertex::new(0.0, 0.0, 1.0);
         assert_eq!(ver0_deg.dot(&angle_to_normal(0.0)), ver0_deg.0.z);
         let ver1_deg = Vertex::new(0.0, 0.0, rand::random());
         assert_eq!(ver1_deg.dot(&angle_to_normal(0.0)), ver1_deg.0.z);
 
-        // Test that perjecting on 45° returns a diffarent value
+        // Test that projecting on 45° returns a diffarent value
         let ver0_45deg = Vertex::new(0.0, 0.0, 1.0);
         assert_ne!(ver0_45deg.dot(&angle_to_normal(45.0)), ver0_45deg.dot(&angle_to_normal(0.0)));
         let ver1_45deg = Vertex::new(0.0, 0.0, rand::random());
