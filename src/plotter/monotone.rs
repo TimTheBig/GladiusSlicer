@@ -1,4 +1,4 @@
-use crate::utils::{orientation, point_y_lerp, Orientation};
+use crate::utils::{orientation_2d, point_y_lerp, Orientation};
 use geo_3d::{Coord, Polygon, SimplifyVwPreserve};
 use itertools::Itertools;
 use std::cmp::Ordering;
@@ -68,13 +68,13 @@ pub fn get_monotone_sections(poly: &Polygon<f64>) -> Vec<MonotoneSection> {
                 .map(|(&next, &point, &prev)| {
                     // Identify what type of point this is
                     let point_type = if is_above(&point, &prev) && is_above(&point, &next) {
-                        if orientation(&prev, &point, &next) != Orientation::Right {
+                        if orientation_2d(&prev, &point, &next) != Orientation::Right {
                             PointType::Split
                         } else {
                             PointType::Start
                         }
                     } else if !is_above(&point, &prev) && !is_above(&point, &next) {
-                        if orientation(&prev, &point, &next) != Orientation::Right {
+                        if orientation_2d(&prev, &point, &next) != Orientation::Right {
                             PointType::Merge
                         } else {
                             PointType::End

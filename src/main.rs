@@ -105,7 +105,9 @@ See simple_input for an alternative command."
     print_settings: bool,
     #[arg(
         long = "simple_input",
-        help = "The input should only be a list of files that will be auto translated to the center of the build plate."
+        help = "The input should only be a list of files that will be auto translated to the center of the build plate.",
+        alias = "simple-input",
+        alias = "simple"
     )]
     simple_input: bool,
     #[arg(
@@ -147,6 +149,7 @@ fn main() {
                 3 => LevelFilter::Debug,
                 _ => LevelFilter::Trace,
             })
+            // .with_timestamp_format(time::macros::format_description!(version = 2, "[year]-[month]-[day] [hour repr:12]:[minute]:[second][period]"))
             .init()
             .expect("Only Logger Setup");
     }

@@ -77,7 +77,7 @@ impl Slice {
         }
     }
 
-    /// creates a slice from  a multi line string
+    /// Creates a `Slice` from a `MultiLineString`
     pub fn from_multiple_point_loop(
         lines: MultiLineString<f64>,
         bottom_height: f64,

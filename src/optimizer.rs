@@ -157,6 +157,7 @@ pub fn state_optomizer(cmds: &mut Vec<Command>) {
     }
 }
 
+#[allow(unused)]
 pub fn arc_optomizer(cmds: &mut [Command]) {
     let mut ranges = vec![];
 
@@ -265,6 +266,7 @@ pub fn arc_optomizer(cmds: &mut [Command]) {
     }
 }
 
+#[allow(unused)]
 fn line_bisector(p0: Coord<f64>, p1: Coord<f64>, p2: Coord<f64>) -> (Coord<f64>, Coord<f64>) {
     let l1_len = p0.distance(p1);
     let l2_len = p1.distance(p2);
@@ -309,6 +311,7 @@ fn line_bisector(p0: Coord<f64>, p1: Coord<f64>, p2: Coord<f64>) -> (Coord<f64>,
 /// let intersection = ray_ray_intersection(segment, ray);
 /// assert_eq!(intersection, Some(Coord { x: 2.0, y: 2.0, z: 2.0 }));
 /// ```
+#[allow(unused)]
 fn ray_ray_intersection(s: Line<f64>, d: Line<f64>) -> Option<Coord<f64>> {
     const EPSILON: f64 = 1e-9;
 

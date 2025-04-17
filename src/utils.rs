@@ -143,6 +143,7 @@ pub const fn lerp(a: f64, b: f64, t: f64) -> f64 {
 }
 
 /// Function to generate a unit bisector of the angle p0, p1, p2 that will always be inside the angle to the left
+#[allow(unused)]
 pub fn directional_unit_bisector_left(
     p0: &Coord<f64>,
     p1: &Coord<f64>,
@@ -156,10 +157,10 @@ pub fn directional_unit_bisector_left(
 
     let direction = v1_scale + v2_scale;
 
-    match orientation(p0, p1, p2) {
+    match orientation_2d(p0, p1, p2) {
         Orientation::Linear => {
             let perp = Vector2::new(-v1.y, v1.x).normalize();
-            match orientation(p0, p1, &Coord::from((p1.x + perp.x, p1.y + perp.y, 0.0))) {
+            match orientation_2d(p0, p1, &Coord::from((p1.x + perp.x, p1.y + perp.y, 0.0))) {
                 Orientation::Linear => {
                     unreachable!()
                 }
@@ -179,7 +180,7 @@ pub enum Orientation {
     Right,
 }
 
-pub fn orientation(p: &Coord<f64>, q: &Coord<f64>, r: &Coord<f64>) -> Orientation {
+pub fn orientation_2d(p: &Coord<f64>, q: &Coord<f64>, r: &Coord<f64>) -> Orientation {
     let left_val = (q.x - p.x) * (r.y - p.y);
     let right_val = (q.y - p.y) * (r.x - p.x);
 

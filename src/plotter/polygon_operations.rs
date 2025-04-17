@@ -1,16 +1,22 @@
-use geo_3d::{MultiPolygon, Polygon};
-
-// todo remove dependency on geo clipper and by extension bindgen
+use csgrs::CSG;
+use geo_3d::{Coord, MultiPolygon, Polygon};
+use crate::PLANE_NORMAL;
 
 pub trait PolygonOperations {
+    // todo return Self
     fn offset_from(&self, delta: f64) -> MultiPolygon<f64>;
 
+    // todo return Self
     fn difference_with(&self, other: &MultiPolygon<f64>) -> MultiPolygon<f64>;
 
+    // todo return Self
     fn intersection_with(&self, other: &MultiPolygon<f64>) -> MultiPolygon<f64>;
 
+    // todo return Self
     fn union_with(&self, other: &MultiPolygon<f64>) -> MultiPolygon<f64>;
 
+    // todo return Self
+    #[allow(unused)]
     fn xor_with(&self, other: &MultiPolygon<f64>) -> MultiPolygon<f64>;
 }
 
